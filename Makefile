@@ -17,6 +17,11 @@ vet: fmt
 run: vet
 	go run ./cmd/web -addr=${ADDRESS} -dsn=${VCOACH_DB_DSN}
 
+PHONY: start
+start:
+	@echo "Starting sql server..."
+	sudo service postgresql start
+
 
 .PHONY: db/psql
 db/psql:

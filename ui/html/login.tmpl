@@ -1,0 +1,14 @@
+{{ template "base" . }}
+{{ define "content" }}
+<div class="form-container">
+  <h2>Login to V-Coach</h2>
+  <form method="POST" action="/login">
+    <label>Email:</label>
+    <input type="email" name="email" required>
+    <label>Password:</label>
+    <input type="password" name="password" required>
+    <button type="submit">Login</button>
+  </form>
+  <p>Don't have an account? <a href="/signup">Sign up</a></p>
+</div>
+{{ end }}

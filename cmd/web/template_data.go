@@ -1,6 +1,8 @@
 package main
 
-import "github.com/cohune-cabbage/di/internal/data"
+import (
+	"github.com/cohune-cabbage/di/internal/data"
+)
 
 type TemplateData struct {
 	Title           string
