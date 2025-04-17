@@ -10,6 +10,7 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
+	"github.com/joho/godotenv"
 )
 
 type application struct {
@@ -25,8 +26,13 @@ type HomePageData struct {
 }
 
 func main() {
-	addr := flag.String("addr", "5432", "HTTP network address")
-	dsn := flag.String("dsn", "postgres://vcoach:seo@localhost/vcoach", "PostgreSQL DSN")
+	err := godotenv.Load(".envrc")
+	if err != nil {
+		log.Fatalf("Error loading .envrc file")
+	}
+
+	addr := flag.String("addr", os.Getenv("ADDRESS"), "HTTP network address")
+	dsn := flag.String("dsn", os.Getenv("VCOACH_DB_DSN"), "PostgreSQL DSN")
 
 	flag.Parse()
 

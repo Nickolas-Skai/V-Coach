@@ -17,23 +17,20 @@ vet: fmt
 run: vet
 	go run ./cmd/web -addr=${ADDRESS} -dsn=${VCOACH_DB_DSN}
 
-PHONY: start
+.PHONY: start
 start:
 	@echo "Starting sql server..."
 	sudo service postgresql start
 
-
 .PHONY: db/psql
 db/psql:
 	sudo -u vcoach psql --host=localhost --dbname=vcoach --username=vcoach
-
 
 ## db/migrations/new name=$1: create a new database migration
 .PHONY: db/migrations/new
 db/migrations/new:
 	@echo 'Creating migration files for ${name}...'
 	migrate create -seq -ext=.sql -dir=./migrations ${name}
-
 
 ## db/migrations/up: apply all up database migrations
 .PHONY: db/migrations/up

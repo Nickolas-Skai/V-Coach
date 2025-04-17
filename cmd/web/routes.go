@@ -1,6 +1,5 @@
 package main
 
-//NEED UPDATE
 import (
 	"net/http"
 )
@@ -8,10 +7,10 @@ import (
 func (app *application) routes() http.Handler {
 	mux := http.NewServeMux()
 	fileServer := http.FileServer(http.Dir("./ui/static/"))
-	mux.Handle("GET /static/", http.StripPrefix("/static", fileServer))
-	mux.HandleFunc("GET /{$}", app.homepage)
-	//	mux.HandleFunc("GET /login", app.loginpage)
-	//	mux.HandleFunc("GET /signup", app.signuppage)
+	mux.Handle("/static/", http.StripPrefix("/static", fileServer))
+	mux.HandleFunc("/", app.homepage)
+	mux.HandleFunc("/login", app.loginHandler)
+	mux.HandleFunc("/signup", app.signupHandler)
 
 	return app.loggingMiddleware(mux)
 }

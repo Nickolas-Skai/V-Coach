@@ -1,7 +1,6 @@
 package data
 
 import (
-	//	"context"
 	"database/sql"
 	"time"
 
@@ -15,11 +14,13 @@ type SignUp struct {
 	CreatedAt time.Time `json:"created_at"`
 	Name      string    `json:"name"`
 	Email     string    `json:"email"`
+	Password  string    `json:"password"`
 	Role      string    `json:"role"`
 	Age       *int      `json:"age,omitempty"`
 	SchoolID  *int      `json:"school_id,omitempty"`
 	CoachID   *int      `json:"coach_id,omitempty"`
 }
+
 type SignUpModel struct {
 	DB        *sql.DB
 	Validator *validator.Validator
