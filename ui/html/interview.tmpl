@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interview</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="avatar-area">
+            <img src="/static/images/avatar.png" alt="Avatar" class="avatar">
+        </div>
+        <div class="question-area">
+            <p>{{.CurrentQuestion}}</p>
+        </div>
+        <div class="input-area">
+            <input type="text" id="response" placeholder="Type your response here...">
+            <button id="voice-record">🎤</button>
+        </div>
+        <div class="confidence-area">
+            <label>Confidence:</label>
+            <input type="radio" name="confidence" value="1"> 1
+            <input type="radio" name="confidence" value="2"> 2
+            <input type="radio" name="confidence" value="3"> 3
+            <input type="radio" name="confidence" value="4"> 4
+            <input type="radio" name="confidence" value="5"> 5
+        </div>
+        <div class="buttons-area">
+            <button id="submit-response">Submit Response</button>
+            <button id="ask-followup">Ask Follow-up</button>
+        </div>
+        <div class="feedback-area">
+            <p>{{.TipResponse}}</p>
+        </div>
+        <div class="timer-area">
+            <p>Time left: <span id="timer">60</span> seconds</p>
+        </div>
+    </div>
+    <script src="/static/js/interview.js"></script>
+</body>
+</html>
