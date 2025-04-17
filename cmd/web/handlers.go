@@ -2,7 +2,6 @@ package main
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/cohune-cabbage/di/internal/data"
 	"github.com/cohune-cabbage/di/internal/validator"
@@ -17,6 +16,7 @@ func (app *application) homepage(w http.ResponseWriter, r *http.Request) {
 		Title:           "Home",
 		HeaderText:      "Welcome to V-Coach",
 		PageDescription: "Your virtual coaching assistant.",
+		NavLogo:         "/static/img/logo.png",
 	}
 	err := app.render(w, http.StatusOK, "homepage.tmpl", data)
 	if err != nil {

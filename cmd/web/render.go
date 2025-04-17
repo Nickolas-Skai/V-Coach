@@ -25,7 +25,7 @@ func (app *application) render(w http.ResponseWriter, status int, page string, d
 		return err
 	}
 
-	err := ts.ExecuteTemplate(buf, "base", data) // execute base which has {{ block "content" . }}
+	err := ts.ExecuteTemplate(buf, "base.tmpl", data) // execute base which has {{ block "content" . }}
 	if err != nil {
 		err = fmt.Errorf("failed to render template %s: %w", page, err)
 		app.logger.Error("failed to render template", "template", page, "error", err)

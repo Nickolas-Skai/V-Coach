@@ -5,12 +5,13 @@ import (
 	"database/sql"
 	"flag"
 	"html/template"
+	"log"
 	"log/slog"
 	"os"
 	"time"
 
-	_ "github.com/lib/pq"
 	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
 type application struct {
