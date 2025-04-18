@@ -2,7 +2,6 @@ package main
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/cohune-cabbage/di/internal/data"
 	"github.com/cohune-cabbage/di/internal/validator"

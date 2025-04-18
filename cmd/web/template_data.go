@@ -5,22 +5,22 @@ import (
 )
 
 type TemplateData struct {
-	Title                string
-	HeaderText           string
-	PageDescription      string
-	NavLogo              string
-	FormErrors           map[string]string
-	FormData             map[string]string
-	SignUp               *data.SignUp
-	SignUpErrors         map[string]string
-	SignUpFormData       map[string]string
-	Login                *data.Login
-	CurrentQuestion      string
-	QuestionType         string
-	Options              []string
+	Title                 string
+	HeaderText            string
+	PageDescription       string
+	NavLogo               string
+	FormErrors            map[string]string
+	FormData              map[string]string
+	SignUp                *data.SignUp
+	SignUpErrors          map[string]string
+	SignUpFormData        map[string]string
+	Login                 *data.Login
+	CurrentQuestion       string
+	QuestionType          string
+	Options               []string
 	AllowConfidenceRating bool
-	SessionID            string
-	TipResponse          string
+	SessionID             string
+	TipResponse           string
 }
 
 func NewTemplateData() *TemplateData {
