@@ -1,5 +1,62 @@
 {{ template "base" . }}
 {{ define "content" }}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>V-Coach Interview</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .form-container {
+            width: 300px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .form-container h2 {
+            text-align: center;
+        }
+        .form-container label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .form-container input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        .form-container button {
+            width: 100%;
+            padding: 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        .form-container button:hover {
+            background-color: #218838;
+        }
+        .form-container p {
+            text-align: center;
+        }
+        .form-container a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .form-container a:hover {
+            text-decoration: underline;
+        }
+    </style>
 <div class="form-container">
   <h2>Sign Up for V-Coach</h2>
   <form method="POST" action="/signup">
@@ -8,7 +65,7 @@
     <label>Email:</label>
     <input type="email" name="email" required>
     <label>Age:</label>
-    <input type="number" name="age" required>
+    <input type="number" name="age" min="18" required>
     <label>School:</label>
     <input type="text" name="school" required>
     <label>Password:</label>

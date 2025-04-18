@@ -1,0 +1,184 @@
+{{define "content"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>V-Coach Interview</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        body {
+            font-family: "Segoe UI", sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 0;
+        }
+
+        .messenger-container {
+            max-width: 600px;
+            height: 100vh;
+            margin: auto;
+            display: flex;
+            flex-direction: column;
+            background-color: #fff;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            background-color: #0084ff;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 1.2em;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+        }
+
+        .chat-window {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .chat-bubble {
+            background: #e4e6eb;
+            padding: 10px 15px;
+            margin: 10px 0;
+            border-radius: 20px;
+            max-width: 80%;
+        }
+
+        .chat-bubble.user {
+            background: #0084ff;
+            color: white;
+            align-self: flex-end;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .input-section {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-top: 1px solid #ddd;
+            background-color: #fafafa;
+        }
+
+        .input-section input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            margin-right: 10px;
+        }
+
+        .input-section button {
+            background-color: #0084ff;
+            border: none;
+            color: white;
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .quick-replies {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .quick-replies button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 20px;
+            background-color: #d1e7ff;
+            cursor: pointer;
+        }
+
+        .confidence-section {
+            padding: 10px;
+            text-align: center;
+        }
+
+        .feedback-area {
+            padding: 10px;
+            background-color: #f1f1f1;
+            font-style: italic;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="messenger-container">
+        <div class="header">
+            V-Coach Interview
+        </div>
+
+        <div class="chat-window" id="chat-window">
+            <div class="chat-bubble bot">
+                {{.CurrentQuestion}}
+            </div>
+        </div>
+
+        <div class="quick-replies" id="quick-replies">
+            <button>Yes</button>
+            <button>No</button>
+            <button>Maybe</button>
+        </div>
+
+        <div class="confidence-section">
+            <label>Confidence:</label>
+            <input type="radio" name="confidence" value="1"> 1
+            <input type="radio" name="confidence" value="2"> 2
+            <input type="radio" name="confidence" value="3"> 3
+            <input type="radio" name="confidence" value="4"> 4
+            <input type="radio" name="confidence" value="5"> 5
+        </div>
+
+        <div class="feedback-area">
+            {{.TipResponse}}
+        </div>
+
+        <div class="input-section">
+            <input type="text" id="response" placeholder="Type your response...">
+            <button id="voice-btn">🎤</button>
+            <button id="submit-btn">➤</button>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById("submit-btn").addEventListener("click", function () {
+            const chatWindow = document.getElementById("chat-window");
+            const input = document.getElementById("response");
+            const message = input.value.trim();
+            if (message !== "") {
+                const bubble = document.createElement("div");
+                bubble.className = "chat-bubble user";
+                bubble.innerText = message;
+                chatWindow.appendChild(bubble);
+                input.value = "";
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+                // You can add AJAX here to send data to the backend
+            }
+        });
+
+        document.getElementById("voice-btn").addEventListener("click", function () {
+            alert("Voice recording not implemented yet!");
+            // TODO: Hook up to Web Speech API or custom recorder
+            
+        });
+
+        document.querySelectorAll(".quick-replies button").forEach(button => {
+            button.addEventListener("click", () => {
+                document.getElementById("response").value = button.textContent;
+            });
+        });
+    </script>
+</body>
+</html>
+{{end}}

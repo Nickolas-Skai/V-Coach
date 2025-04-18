@@ -116,3 +116,27 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
+
+func (app *application) interviewHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		data := &TemplateData{
+			Title: "Interview",
+			// Add other fields as needed
+		}
+		err := app.render(w, http.StatusOK, "interview.tmpl", data)
+		if err != nil {
+			app.serverError(w, err)
+		}
+		return
+	}
+
+	err := r.ParseForm()
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+
+	// Load session, pull question from DB, and save response (omitted for brevity)
+
+	http.Redirect(w, r, "/interview", http.StatusSeeOther)
+}
