@@ -15,6 +15,13 @@ type TemplateData struct {
 	SignUpErrors    map[string]string
 	SignUpFormData  map[string]string
 	Login           *data.Login
+	Interview       *data.Interview
+	CoachDashboard  *data.CoachDashboard
+	ManageQuestions *data.ManageQuestions
+	EditQuestion    *data.EditQuestion
+	NewQuestion     *data.NewQuestion
+	TeacherSessions *data.TeacherSessions
+	DeleteTeacher   *data.DeleteTeacher
 }
 
 func NewTemplateData() *TemplateData {
