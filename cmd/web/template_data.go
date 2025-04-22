@@ -21,6 +21,20 @@ type TemplateData struct {
 	AllowConfidenceRating bool
 	SessionID             string
 	TipResponse           string
+	QuestionData          *data.QuestionData
+	QuestionDataErrors    map[string]string
+	QuestionDataFormData  map[string]string
+	QuestionDataID        int
+	QuestionDataText      string
+	QuestionDataType      string
+	QuestionDataOptions   []string
+	QuestionDataRequired  bool
+	QuestionDataModel     *data.QuestionModel
+	QuestionDataDB        *data.QuestionModel
+	ErrorMessage          string
+	Data                  map[string]interface{}
+	Question              *data.QuestionData
+	QuestionJSON          string
 }
 
 func NewTemplateData() *TemplateData {
@@ -39,3 +53,5 @@ func NewHomePageData() *HomePageData {
 		Description: "Default Description",
 	}
 }
+
+

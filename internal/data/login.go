@@ -1,6 +1,8 @@
 package data
 
 import (
+	"database/sql"
+	"github.com/cohune-cabbage/di/internal/validator"
 	"time"
 )
 
@@ -10,4 +12,9 @@ type Login struct {
 	Password  string    `json:"password"`
 	CreatedAt time.Time `json:"created_at"`
 	Role      string    `json:"role"`
+}
+
+type LoginModel struct {
+	DB        *sql.DB
+	Validator *validator.Validator
 }

@@ -15,9 +15,11 @@ import (
 )
 
 type application struct {
+	db            *sql.DB
 	addr          *string
 	logger        *slog.Logger
 	templateCache map[string]*template.Template
+	questionModel *QuestionModel
 }
 
 type HomePageData struct {
@@ -57,6 +59,8 @@ func main() {
 		addr:          addr,
 		logger:        logger,
 		templateCache: templateCache,
+		db:            db,
+		questionModel: &QuestionModel{DB: db},
 	}
 
 	err = app.serve()
@@ -83,4 +87,10 @@ func openDB(dsn string) (*sql.DB, error) {
 	}
 
 	return db, nil
+}
+
+//set models
+
+type QuestionModel struct {
+	DB *sql.DB
 }

@@ -1,0 +1,20 @@
+{{ define "content" }}
+<h2>Manage Questions</h2>
+<table>
+  <thead><tr><th>ID</th><th>Text</th><th>Type</th><th>Actions</th></tr></thead>
+  <tbody>
+    {{ range .Questions }}
+      <tr>
+        <td>{{ .ID }}</td>
+        <td>{{ .Text }}</td>
+        <td>{{ .Type }}</td>
+        <td>
+          <a href="/questions/edit/{{ .ID }}">Edit</a> |
+          <a href="/questions/hide/{{ .ID }}">{{ if .Visible }}Hide{{ else }}Show{{ end }}</a>
+        </td>
+      </tr>
+    {{ end }}
+  </tbody>
+</table>
+<a href="/questions/new">Add New Question</a>
+{{ end }}
