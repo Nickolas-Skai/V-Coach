@@ -205,3 +205,73 @@ func (app *application) managequestionsHandler(w http.ResponseWriter, r *http.Re
 
 	http.Redirect(w, r, "/interview", http.StatusSeeOther)
 }
+
+func (app *application) InterviewHandler(w http.ResponseWriter, r *http.Request) {
+	data := &TemplateData{
+		Title: "Interview",
+	}
+	err := app.render(w, http.StatusOK, "interview.tmpl", data)
+	if err != nil {
+		app.serverError(w, err)
+	}
+}
+
+func (app *application) CoachDashboardHandler(w http.ResponseWriter, r *http.Request) {
+	data := &TemplateData{
+		Title: "Coach Dashboard",
+	}
+	err := app.render(w, http.StatusOK, "coach_dashboard.tmpl", data)
+	if err != nil {
+		app.serverError(w, err)
+	}
+}
+
+func (app *application) ManageQuestionsHandler(w http.ResponseWriter, r *http.Request) {
+	data := &TemplateData{
+		Title: "Manage Questions",
+	}
+	err := app.render(w, http.StatusOK, "manage_questions.tmpl", data)
+	if err != nil {
+		app.serverError(w, err)
+	}
+}
+
+func (app *application) EditQuestionHandler(w http.ResponseWriter, r *http.Request) {
+	data := &TemplateData{
+		Title: "Edit Question",
+	}
+	err := app.render(w, http.StatusOK, "edit_question.tmpl", data)
+	if err != nil {
+		app.serverError(w, err)
+	}
+}
+
+func (app *application) NewQuestionHandler(w http.ResponseWriter, r *http.Request) {
+	data := &TemplateData{
+		Title: "New Question",
+	}
+	err := app.render(w, http.StatusOK, "new_question.tmpl", data)
+	if err != nil {
+		app.serverError(w, err)
+	}
+}
+
+func (app *application) TeacherSessionsHandler(w http.ResponseWriter, r *http.Request) {
+	data := &TemplateData{
+		Title: "Teacher Sessions",
+	}
+	err := app.render(w, http.StatusOK, "teacher_sessions.tmpl", data)
+	if err != nil {
+		app.serverError(w, err)
+	}
+}
+
+func (app *application) DeleteTeacherHandler(w http.ResponseWriter, r *http.Request) {
+	data := &TemplateData{
+		Title: "Delete Teacher",
+	}
+	err := app.render(w, http.StatusOK, "delete_teacher.tmpl", data)
+	if err != nil {
+		app.serverError(w, err)
+	}
+}
