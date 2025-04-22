@@ -1,0 +1,11 @@
+{{ template "base" . }}
+{{ define "content" }}
+<div class="container">
+    <h1>{{.Title}}</h1>
+    <p>Are you sure you want to delete this teacher?</p>
+    <form method="POST" action="/coach/delete_teacher/{{.DeleteTeacher.ID}}">
+        <button type="submit">Delete</button>
+        <button type="button" onclick="location.href='/coach/dashboard'">Cancel</button>
+    </form>
+</div>
+{{ end }}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/cohune-cabbage/di/internal/data"
@@ -20,6 +21,7 @@ func (app *application) homepage(w http.ResponseWriter, r *http.Request) {
 	}
 	err := app.render(w, http.StatusOK, "homepage.tmpl", data)
 	if err != nil {
+		app.logger.Error("failed to render template", "template", "homepage.tmpl", "url", r.URL, "method", r.Method, "error", err)
 		app.serverError(w, err)
 	}
 }
@@ -31,6 +33,7 @@ func (app *application) signupHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		err := app.render(w, http.StatusOK, "signup.tmpl", data)
 		if err != nil {
+			app.logger.Error("failed to render template", "template", "signup.tmpl", "url", r.URL, "method", r.Method, "error", err)
 			app.serverError(w, err)
 		}
 		return
@@ -38,6 +41,7 @@ func (app *application) signupHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := r.ParseForm()
 	if err != nil {
+		app.logger.Error("failed to parse form", "url", r.URL, "method", r.Method, "error", err)
 		app.serverError(w, err)
 		return
 	}
@@ -61,10 +65,14 @@ func (app *application) signupHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		err := app.render(w, http.StatusUnprocessableEntity, "signup.tmpl", data)
 		if err != nil {
+			app.logger.Error("failed to render template", "template", "signup.tmpl", "url", r.URL, "method", r.Method, "error", err)
 			app.serverError(w, err)
 		}
 		return
 	}
+
+	// Log the submitted data for debugging before inserting
+	app.logger.Info("submitted sign up data", "data", signUp)
 
 	// Save the signUp data to the database (omitted for brevity)
 
@@ -78,6 +86,7 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		err := app.render(w, http.StatusOK, "login.tmpl", data)
 		if err != nil {
+			app.logger.Error("failed to render template", "template", "login.tmpl", "url", r.URL, "method", r.Method, "error", err)
 			app.serverError(w, err)
 		}
 		return
@@ -85,6 +94,7 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := r.ParseForm()
 	if err != nil {
+		app.logger.Error("failed to parse form", "url", r.URL, "method", r.Method, "error", err)
 		app.serverError(w, err)
 		return
 	}
@@ -107,10 +117,14 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		err := app.render(w, http.StatusUnprocessableEntity, "login.tmpl", data)
 		if err != nil {
+			app.logger.Error("failed to render template", "template", "login.tmpl", "url", r.URL, "method", r.Method, "error", err)
 			app.serverError(w, err)
 		}
 		return
 	}
+
+	// Log the submitted data for debugging before inserting
+	app.logger.Info("submitted login data", "data", login)
 
 	// Authenticate the user (omitted for brevity)
 
@@ -123,6 +137,7 @@ func (app *application) InterviewHandler(w http.ResponseWriter, r *http.Request)
 	}
 	err := app.render(w, http.StatusOK, "interview.tmpl", data)
 	if err != nil {
+		app.logger.Error("failed to render template", "template", "interview.tmpl", "url", r.URL, "method", r.Method, "error", err)
 		app.serverError(w, err)
 	}
 }
@@ -133,6 +148,7 @@ func (app *application) CoachDashboardHandler(w http.ResponseWriter, r *http.Req
 	}
 	err := app.render(w, http.StatusOK, "coach_dashboard.tmpl", data)
 	if err != nil {
+		app.logger.Error("failed to render template", "template", "coach_dashboard.tmpl", "url", r.URL, "method", r.Method, "error", err)
 		app.serverError(w, err)
 	}
 }
@@ -143,6 +159,7 @@ func (app *application) ManageQuestionsHandler(w http.ResponseWriter, r *http.Re
 	}
 	err := app.render(w, http.StatusOK, "manage_questions.tmpl", data)
 	if err != nil {
+		app.logger.Error("failed to render template", "template", "manage_questions.tmpl", "url", r.URL, "method", r.Method, "error", err)
 		app.serverError(w, err)
 	}
 }
@@ -153,6 +170,7 @@ func (app *application) EditQuestionHandler(w http.ResponseWriter, r *http.Reque
 	}
 	err := app.render(w, http.StatusOK, "edit_question.tmpl", data)
 	if err != nil {
+		app.logger.Error("failed to render template", "template", "edit_question.tmpl", "url", r.URL, "method", r.Method, "error", err)
 		app.serverError(w, err)
 	}
 }
@@ -163,6 +181,7 @@ func (app *application) NewQuestionHandler(w http.ResponseWriter, r *http.Reques
 	}
 	err := app.render(w, http.StatusOK, "new_question.tmpl", data)
 	if err != nil {
+		app.logger.Error("failed to render template", "template", "new_question.tmpl", "url", r.URL, "method", r.Method, "error", err)
 		app.serverError(w, err)
 	}
 }
@@ -173,6 +192,7 @@ func (app *application) TeacherSessionsHandler(w http.ResponseWriter, r *http.Re
 	}
 	err := app.render(w, http.StatusOK, "teacher_sessions.tmpl", data)
 	if err != nil {
+		app.logger.Error("failed to render template", "template", "teacher_sessions.tmpl", "url", r.URL, "method", r.Method, "error", err)
 		app.serverError(w, err)
 	}
 }
@@ -183,6 +203,7 @@ func (app *application) DeleteTeacherHandler(w http.ResponseWriter, r *http.Requ
 	}
 	err := app.render(w, http.StatusOK, "delete_teacher.tmpl", data)
 	if err != nil {
+		app.logger.Error("failed to render template", "template", "delete_teacher.tmpl", "url", r.URL, "method", r.Method, "error", err)
 		app.serverError(w, err)
 	}
 }
