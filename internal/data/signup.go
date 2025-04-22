@@ -2,6 +2,7 @@ package data
 
 import (
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/cohune-cabbage/di/internal/validator"
@@ -24,4 +25,45 @@ type SignUp struct {
 type SignUpModel struct {
 	DB        *sql.DB
 	Validator *validator.Validator
+}
+
+// Insert inserts a new signup record into the database.
+func (m *SignUpModel) Insert(signup *SignUp) error {
+	// Check if the user already exists
+	var exists bool
+	checkQuery := `SELECT EXISTS (SELECT 1 FROM users WHERE email = $1)`
+	err := m.DB.QueryRow(checkQuery, signup.Email).Scan(&exists)
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		return fmt.Errorf("a user with this email already exists")
+	}
+
+	// Insert the new user into the database
+	query := `
+			INSERT INTO users (name, email, password, role, age, school_id, coach_id, created_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			RETURNING id
+		`
+
+	// Execute the query and scan the returned ID into the signup struct
+	err = m.DB.QueryRow(
+		query,
+		signup.Name,
+		signup.Email,
+		signup.Password,
+		signup.Role,
+		signup.Age,
+		signup.SchoolID,
+		signup.CoachID,
+		time.Now(),
+	).Scan(&signup.ID)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

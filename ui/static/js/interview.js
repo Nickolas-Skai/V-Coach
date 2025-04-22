@@ -2,7 +2,13 @@
 const questionContainer = document.getElementById('question-container');
 const inputContainer = document.getElementById('input-container');
 
-const question = {{ .QuestionJSON }}; // embedded JSON object with question info
+fetch('/api/question')
+  .then(response => response.json())
+  .then(data => {
+    const question = data;
+    renderInput(question);
+  })
+  .catch(error => console.error('Error fetching question:', error));
 
 function renderInput(question) {
   questionContainer.innerHTML = `<p>${question.text}</p>`;

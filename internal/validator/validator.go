@@ -51,14 +51,13 @@ func IsValidEmail(email string) bool {
 	return EmailRX.MatchString(email)
 }
 
-
 // IsValidQuestionType checks if the provided question type is valid.
 func IsValidQuestionType(questionType string) bool {
-    validTypes := []string{"text", "checkbox", "radio", "scale"}
-    for _, validType := range validTypes {
-        if questionType == validType {
-            return true
-        }
-    }
-    return false
+	validTypes := []string{"text", "checkbox", "radio", "scale"}
+	for _, validType := range validTypes {
+		if questionType == validType {
+			return true
+		}
+	}
+	return false
 }

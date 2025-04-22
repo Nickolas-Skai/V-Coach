@@ -7,9 +7,11 @@ import (
 
 	"context"
 	"database/sql"
+
 	"github.com/cohune-cabbage/di/internal/data"
 	"github.com/cohune-cabbage/di/internal/validator"
 	_ "github.com/lib/pq"
+	// "golang.org/x/crypto/bcrypt"
 )
 
 //getting usersthings
@@ -84,7 +86,7 @@ func (app *application) loginHandler(w http.ResponseWriter, r *http.Request) {
 				"password": login.Password,
 			},
 		}
-		err := app.render(w, http.StatusUnprocessableEntity, "login.tmpl", data)
+		err := app.render(w, http.StatusUnprocessableEntity, "homepage.tmpl", data)
 		if err != nil {
 			app.serverError(w, err)
 		}
@@ -160,16 +162,83 @@ func (app *application) InsertQuestion(ctx context.Context, question *data.Quest
 	return id, nil
 }
 
-func (m *QuestionModel) Insert(ctx context.Context, qd QuestionData) (int, error) {
-    query := `
-        INSERT INTO questions (question_text, question_type, options, is_active)
-        VALUES ($1, $2, $3, $4)
-        RETURNING id
-    `
-    var id int
-    err := m.DB.QueryRowContext(ctx, query, qd.Text, qd.Type, qd.Options, qd.IsActive).Scan(&id)
-    if err != nil {
-        return 0, err
-    }
-    return id, nil
+// InstertQuestion inserts a new question into the database
+func (app *application) InsertQuestionHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		data := &TemplateData{
+			Title: "Insert Question",
+		}
+		err := app.render(w, http.StatusOK, "insert_question.tmpl", data)
+		if err != nil {
+			app.serverError(w, err)
+		}
+		return
+	}
+
+	err := r.ParseForm()
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+
+	question := &data.QuestionData{
+		Text:                  r.PostForm.Get("question_text"),
+		Type:                  r.PostForm.Get("question_type"),
+		Options:               r.PostForm["options"],
+		AllowConfidenceRating: r.PostForm.Get("allow_confidence_rating") == "on",
+	}
+
+	v := validator.NewValidator()
+	v.Check(validator.NotBlank(question.Text), "question_text", "Question text cannot be blank")
+	v.Check(validator.NotBlank(question.Type), "question_type", "Question type cannot be blank")
+	for i, option := range question.Options {
+		if !validator.NotBlank(option) {
+			v.AddError(fmt.Sprintf("options[%d]", i), "Option cannot be blank")
+		}
+	}
+
+	if !v.ValidData() {
+		data := &TemplateData{
+			Title:        "Insert Question",
+			ErrorMessage: fmt.Sprintf("%v", v.Errors),
+			Data: map[string]interface{}{
+				"question_text":           question.Text,
+				"question_type":           question.Type,
+				"options":                 question.Options,
+				"allow_confidence_rating": question.AllowConfidenceRating,
+			},
+		}
+		err := app.render(w, http.StatusUnprocessableEntity, "insert_question.tmpl", data)
+		if err != nil {
+			app.serverError(w, err)
+		}
+		return
+	}
+
+	id, err := app.InsertQuestion(r.Context(), question)
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+
+	http.Redirect(w, r, fmt.Sprintf("/questions/%d", id), http.StatusSeeOther)
+}
+
+func (app *application) logoutHandler(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{
+		Name:   "session_token",
+		Value:  "",
+		MaxAge: -1,
+	})
+	http.SetCookie(w, &http.Cookie{
+		Name:   "user_role",
+		Value:  "",
+		MaxAge: -1,
+	})
+	http.SetCookie(w, &http.Cookie{
+		Name:   "user_name",
+		Value:  "",
+		MaxAge: -1,
+	})
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }

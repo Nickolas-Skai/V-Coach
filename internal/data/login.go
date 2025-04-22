@@ -18,3 +18,5 @@ type LoginModel struct {
 	DB        *sql.DB
 	Validator *validator.Validator
 }
+
+//validate login

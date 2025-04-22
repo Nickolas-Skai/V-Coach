@@ -7,6 +7,7 @@ import (
 type TemplateData struct {
 	Title                 string
 	HeaderText            string
+	Greeting              string
 	PageDescription       string
 	NavLogo               string
 	FormErrors            map[string]string
@@ -53,5 +54,3 @@ func NewHomePageData() *HomePageData {
 		Description: "Default Description",
 	}
 }
-
-

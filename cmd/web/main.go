@@ -20,6 +20,7 @@ type application struct {
 	logger        *slog.Logger
 	templateCache map[string]*template.Template
 	questionModel *QuestionModel
+	signUpModel   *SignUpModel
 }
 
 type HomePageData struct {
@@ -93,4 +94,15 @@ func openDB(dsn string) (*sql.DB, error) {
 
 type QuestionModel struct {
 	DB *sql.DB
+}
+type SignUpModel struct {
+	ID        int64     `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	Name      string    `json:"name"`
+	Email     string    `json:"email"`
+	Password  string    `json:"password_hash"`
+	Role      string    `json:"role"`
+	Age       *int      `json:"age,omitempty"`
+	SchoolID  *int      `json:"school_id,omitempty"`
+	CoachID   *int      `json:"coach_id,omitempty"`
 }

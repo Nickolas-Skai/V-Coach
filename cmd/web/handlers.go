@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 
 	"github.com/cohune-cabbage/di/internal/data"
@@ -9,18 +10,31 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func (app *application) serverError(w http.ResponseWriter, err error) {
+func (app *application) serverError(w http.ResponseWriter, _ error) {
 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
 
 func (app *application) homepage(w http.ResponseWriter, r *http.Request) {
+	// Retrieve the user's name from a cookie (or session)
+	cookie, err := r.Cookie("user_name")
+	var greeting string
+	if err == nil {
+		// If the cookie exists, use the user's name for the greeting
+		greeting = fmt.Sprintf("Welcome back, %s!", cookie.Value)
+	} else {
+		// If no cookie is found, use a default greeting
+		greeting = "Welcome to V-Coach!"
+	}
+
+	// Pass the greeting to the template
 	data := &TemplateData{
 		Title:           "Home",
 		HeaderText:      "Welcome to V-Coach",
+		Greeting:        greeting,
 		PageDescription: "Your virtual coaching assistant.",
 		NavLogo:         "static/images/logo.svg",
 	}
-	err := app.render(w, http.StatusOK, "homepage.tmpl", data)
+	err = app.render(w, http.StatusOK, "homepage.tmpl", data)
 	if err != nil {
 		app.serverError(w, err)
 	}
@@ -44,33 +58,33 @@ func (app *application) signupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	signUp := &data.SignUp{
-		Name:  r.PostForm.Get("name"),
-		Email: r.PostForm.Get("email"),
-		Role:  r.PostForm.Get("role"),
+	signup := &data.SignUp{
+		Name:     r.PostForm.Get("name"),
+		Email:    r.PostForm.Get("email"),
+		Password: r.PostForm.Get("password"),
+		Role:     r.PostForm.Get("role"),
 	}
 
-	v := validator.NewValidator()
-	v.Check(validator.NotBlank(signUp.Name), "name", "Name cannot be blank")
-	v.Check(validator.NotBlank(signUp.Email), "email", "Email cannot be blank")
-	v.Check(validator.IsValidEmail(signUp.Email), "email", "Invalid email address")
-	//if user already signed up
+	// Hash the password before saving it to the database
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(signup.Password), bcrypt.DefaultCost)
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+	signup.Password = string(hashedPassword)
 
-	if !v.ValidData() {
-		data := &TemplateData{
-			Title:        "Sign Up",
-			SignUp:       signUp,
-			SignUpErrors: v.Errors,
+	// Insert the user into the database
+	err = &app.signUpModel.Insert(signup)
+	if err != nil {
+		if err.Error() == "a user with this email already exists" {
+			http.Error(w, "A user with this email already exists", http.StatusConflict)
+			return
 		}
-		err := app.render(w, http.StatusUnprocessableEntity, "signup.tmpl", data)
-		if err != nil {
-			app.serverError(w, err)
-		}
+		app.serverError(w, err)
 		return
 	}
 
-	// Save the signUp data to the database (omitted for brevity)
-
+	// Redirect to the login page after successful signup
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
@@ -133,7 +147,7 @@ func (app *application) verifyUserCredentials(email, password string) (bool, err
 	return true, nil
 }
 
-func (app *application) managequestionsHandler(w http.ResponseWriter, r *http.Request) {
+func (app *application) ManagequestionsHandler(w http.ResponseWriter, r *http.Request) {
 
 	convertToMapInterface := func(input map[string]string) map[string]interface{} {
 		output := make(map[string]interface{})
@@ -172,7 +186,7 @@ func (app *application) managequestionsHandler(w http.ResponseWriter, r *http.Re
 
 	options :=
 		r.PostForm["options"] // Assuming options are sent as a slice of strings
-	if len(options) > 0 {	
+	if len(options) > 0 {
 		qd.Options = make([]string, len(options))
 		for i, option := range options {
 			qd.Options[i] = option
@@ -195,25 +209,17 @@ func (app *application) managequestionsHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Save the question data to the database (omitted for brevity)
-	// For example, you might have a function like this:
-	err = app.questionModel.Insert(r.Context(), qd)
+	// Save the question data to the database
+	id, err := app.InsertQuestion(r.Context(), qd)
 	if err != nil {
 		app.serverError(w, err)
 		return
 	}
+	// Optionally, you can use the `id` variable if needed
+	_ = id
+	// Redirect to the interview page after successful insertion
 
 	http.Redirect(w, r, "/interview", http.StatusSeeOther)
-}
-
-func (app *application) InterviewHandler(w http.ResponseWriter, r *http.Request) {
-	data := &TemplateData{
-		Title: "Interview",
-	}
-	err := app.render(w, http.StatusOK, "interview.tmpl", data)
-	if err != nil {
-		app.serverError(w, err)
-	}
 }
 
 func (app *application) CoachDashboardHandler(w http.ResponseWriter, r *http.Request) {
