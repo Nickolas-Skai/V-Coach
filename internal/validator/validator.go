@@ -51,6 +51,21 @@ func IsValidEmail(email string) bool {
 	return EmailRX.MatchString(email)
 }
 
+func IsValidPassword(password string) bool {
+	// Password must be at least 8 characters long and contain at least one digit
+	if len(password) < 8 {
+		return false
+	}
+	hasDigit := false
+	for _, char := range password {
+		if char >= '0' && char <= '9' {
+			hasDigit = true
+			break
+		}
+	}
+	return hasDigit
+}
+
 // IsValidQuestionType checks if the provided question type is valid.
 func IsValidQuestionType(questionType string) bool {
 	validTypes := []string{"text", "checkbox", "radio", "scale"}
@@ -60,4 +75,12 @@ func IsValidQuestionType(questionType string) bool {
 		}
 	}
 	return false
+}
+func Valid(value string) bool {
+	return NotBlank(value) && MinLength(value, 1) && MaxLength(value, 1000)
+}
+
+// Validate response
+func ValidateResponse(response string) bool {
+	return NotBlank(response) && MinLength(response, 1) && MaxLength(response, 1000)
 }

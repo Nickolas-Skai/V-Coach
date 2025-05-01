@@ -63,3 +63,11 @@ db/migrations/fix:
 		echo "No dirty migration found"; \
 	fi
 	@rm -f /tmp/migrate_version
+
+## db/migrations/force: force a migration to a specific version
+	.PHONY: db/reset
+db/reset:
+	@echo "Dropping all tables and resetting migrations..."
+	psql --host=localhost --dbname=vcoach --username=vcoach -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO public;"
+	migrate -path ./migrations -database "postgres://vcoach:seo@localhost:5432/vcoach?sslmode=disable" force 0
+	migrate -path ./migrations -database "postgres://vcoach:seo@localhost:5432/vcoach?sslmode=disable" up

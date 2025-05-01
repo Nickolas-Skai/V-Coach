@@ -10,17 +10,20 @@ import (
 	"os"
 	"time"
 
+	"github.com/cohune-cabbage/di/internal/data"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
 type application struct {
-	db            *sql.DB
-	addr          *string
-	logger        *slog.Logger
-	templateCache map[string]*template.Template
-	questionModel *QuestionModel
-	signUpModel   *SignUpModel
+	db                     *sql.DB
+	addr                   *string
+	logger                 *slog.Logger
+	templateCache          map[string]*template.Template
+	questionModel          *data.QuestionModel
+	InterviewResponseModel *data.InterviewResponseModel
+	signUpModel            *data.SignUpModel
+	loginModel             *data.LoginModel
 }
 
 type HomePageData struct {
@@ -57,11 +60,14 @@ func main() {
 	defer db.Close()
 
 	app := &application{
-		addr:          addr,
-		logger:        logger,
-		templateCache: templateCache,
-		db:            db,
-		questionModel: &QuestionModel{DB: db},
+		addr:                   addr,
+		logger:                 logger,
+		templateCache:          templateCache,
+		db:                     db,
+		signUpModel:            data.NewSignUpModel(db),
+		loginModel:             data.NewLoginModel(db),
+		questionModel:          &data.QuestionModel{DB: db},
+		InterviewResponseModel: data.NewInterviewResponseModel(db),
 	}
 
 	err = app.serve()

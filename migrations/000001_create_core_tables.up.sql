@@ -1,7 +1,8 @@
 -- Filename: migrations/000001_create_core_tables.up.sql
 -- This migration creates the core tables for the application, including users, schools, questions, sessions, responses, and coach tips.
 -- It also establishes the necessary foreign key relationships between these tables.
--- This migration is essential for setting up the database schema and ensuring data integrity across related tables.
+
+-- Create the "users" table
 CREATE TABLE "users" (
   "id" SERIAL PRIMARY KEY,
   "name" VARCHAR(100) NOT NULL,
@@ -14,6 +15,7 @@ CREATE TABLE "users" (
   "created_at" TIMESTAMP DEFAULT (CURRENT_TIMESTAMP)
 );
 
+-- Create the "schools" table
 CREATE TABLE "schools" (
   "id" SERIAL PRIMARY KEY,
   "name" VARCHAR(150) NOT NULL,
@@ -22,15 +24,19 @@ CREATE TABLE "schools" (
   "managment" VARCHAR(100)
 );
 
+-- Create the "questions" table
 CREATE TABLE "questions" (
   "id" SERIAL PRIMARY KEY,
   "text" TEXT NOT NULL,
+  "audio_url" TEXT,
+  "image_url" TEXT,
+  "required" BOOLEAN DEFAULT true,
   "type" VARCHAR(20) NOT NULL,
   "options" JSONB,
-  "is_active" BOOLEAN DEFAULT true,
-  "created_by" INT NOT NULL
+  "is_active" BOOLEAN DEFAULT true
 );
 
+-- Create the "sessions" table
 CREATE TABLE "sessions" (
   "id" SERIAL PRIMARY KEY,
   "teacher_id" INT NOT NULL,
@@ -38,6 +44,7 @@ CREATE TABLE "sessions" (
   "ended_at" TIMESTAMP
 );
 
+-- Create the "responses" table
 CREATE TABLE "responses" (
   "id" SERIAL PRIMARY KEY,
   "session_id" INT NOT NULL,
@@ -48,6 +55,7 @@ CREATE TABLE "responses" (
   "submitted_at" TIMESTAMP DEFAULT (CURRENT_TIMESTAMP)
 );
 
+-- Create the "coach_tips" table
 CREATE TABLE "coach_tips" (
   "id" SERIAL PRIMARY KEY,
   "session_id" INT NOT NULL,
@@ -56,18 +64,15 @@ CREATE TABLE "coach_tips" (
   "generated_at" TIMESTAMP DEFAULT (CURRENT_TIMESTAMP)
 );
 
-ALTER TABLE "users" ADD FOREIGN KEY ("school_id") REFERENCES "schools" ("id");
 
-ALTER TABLE "users" ADD FOREIGN KEY ("coach_id") REFERENCES "users" ("id");
+-- Add foreign key constraints
+ALTER TABLE "users" ADD CONSTRAINT fk_users_school FOREIGN KEY ("school_id") REFERENCES "schools" ("id") ON DELETE SET NULL;
+ALTER TABLE "users" ADD CONSTRAINT fk_users_coach FOREIGN KEY ("coach_id") REFERENCES "users" ("id") ON DELETE SET NULL;
 
-ALTER TABLE "questions" ADD FOREIGN KEY ("created_by") REFERENCES "users" ("id");
+ALTER TABLE "sessions" ADD CONSTRAINT fk_sessions_teacher FOREIGN KEY ("teacher_id") REFERENCES "users" ("id") ON DELETE CASCADE;
 
-ALTER TABLE "sessions" ADD FOREIGN KEY ("teacher_id") REFERENCES "users" ("id");
+ALTER TABLE "responses" ADD CONSTRAINT fk_responses_session FOREIGN KEY ("session_id") REFERENCES "sessions" ("id") ON DELETE CASCADE;
+ALTER TABLE "responses" ADD CONSTRAINT fk_responses_question FOREIGN KEY ("question_id") REFERENCES "questions" ("id") ON DELETE CASCADE;
 
-ALTER TABLE "responses" ADD FOREIGN KEY ("session_id") REFERENCES "sessions" ("id");
-
-ALTER TABLE "responses" ADD FOREIGN KEY ("question_id") REFERENCES "questions" ("id");
-
-ALTER TABLE "coach_tips" ADD FOREIGN KEY ("session_id") REFERENCES "sessions" ("id");
-
-ALTER TABLE "coach_tips" ADD FOREIGN KEY ("question_id") REFERENCES "questions" ("id");
+ALTER TABLE "coach_tips" ADD CONSTRAINT fk_coach_tips_session FOREIGN KEY ("session_id") REFERENCES "sessions" ("id") ON DELETE CASCADE;
+ALTER TABLE "coach_tips" ADD CONSTRAINT fk_coach_tips_question FOREIGN KEY ("question_id") REFERENCES "questions" ("id") ON DELETE CASCADE;

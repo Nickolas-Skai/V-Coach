@@ -1,6 +1,8 @@
 package main
 
 import (
+	"html/template"
+
 	"github.com/cohune-cabbage/di/internal/data"
 )
 
@@ -16,7 +18,7 @@ type TemplateData struct {
 	SignUpErrors          map[string]string
 	SignUpFormData        map[string]string
 	Login                 *data.Login
-	CurrentQuestion       string
+	CurrentQuestion       *Question
 	QuestionType          string
 	Options               []string
 	AllowConfidenceRating bool
@@ -34,16 +36,19 @@ type TemplateData struct {
 	QuestionDataDB        *data.QuestionModel
 	ErrorMessage          string
 	Data                  map[string]interface{}
-	Question              *data.QuestionData
-	QuestionJSON          string
+	Questions             []Question  // Add this field for questions
+	QuestionsJSON         template.JS // Add this field for JSON representation of questions
+	InterviewResponse     *data.InterviewResponseModel
+	InterviewResponseJSON *data.InterviewResponseModel
 }
 
 func NewTemplateData() *TemplateData {
 	return &TemplateData{
-		Title:      "Default Title",
-		HeaderText: "Default HeaderText",
-		FormErrors: map[string]string{},
-		FormData:   map[string]string{},
+		Title:         "Default Title",
+		HeaderText:    "Default HeaderText",
+		FormErrors:    map[string]string{},
+		FormData:      map[string]string{},
+		QuestionsJSON: template.JS("[]"), // Initialize with an empty JSON array as a valid template.JS value
 	}
 }
 
@@ -53,4 +58,13 @@ func NewHomePageData() *HomePageData {
 		Header:      "Default Header",
 		Description: "Default Description",
 	}
+}
+
+type Question struct {
+	ID                    int
+	Text                  string
+	Type                  string
+	Options               []string // Only for checkbox/radio/scale
+	AllowConfidenceRating bool
+	Required              bool
 }

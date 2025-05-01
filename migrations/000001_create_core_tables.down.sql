@@ -2,18 +2,16 @@
 
 -- Drop foreign key constraints first (reverse order of creation)
 
-ALTER TABLE "coach_tips" DROP CONSTRAINT coach_tips_question_id_fkey;
-ALTER TABLE "coach_tips" DROP CONSTRAINT coach_tips_session_id_fkey;
+ALTER TABLE "coach_tips" DROP CONSTRAINT fk_coach_tips_question;
+ALTER TABLE "coach_tips" DROP CONSTRAINT fk_coach_tips_session;
 
-ALTER TABLE "responses" DROP CONSTRAINT responses_question_id_fkey;
-ALTER TABLE "responses" DROP CONSTRAINT responses_session_id_fkey;
+ALTER TABLE "responses" DROP CONSTRAINT fk_responses_question;
+ALTER TABLE "responses" DROP CONSTRAINT fk_responses_session;
 
-ALTER TABLE "sessions" DROP CONSTRAINT sessions_teacher_id_fkey;
+ALTER TABLE "sessions" DROP CONSTRAINT fk_sessions_teacher;
 
-ALTER TABLE "questions" DROP CONSTRAINT questions_created_by_fkey;
-
-ALTER TABLE "users" DROP CONSTRAINT users_coach_id_fkey;
-ALTER TABLE "users" DROP CONSTRAINT users_school_id_fkey;
+ALTER TABLE "users" DROP CONSTRAINT fk_users_coach;
+ALTER TABLE "users" DROP CONSTRAINT fk_users_school;
 
 -- Then drop the tables (reverse order)
 DROP TABLE IF EXISTS "coach_tips";

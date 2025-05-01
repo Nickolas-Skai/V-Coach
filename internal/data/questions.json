@@ -1,0 +1,128 @@
+
+
+[
+    {
+      "id": "1",
+      "text": "Did you have any Limited Devices Session? If yes, mention how many",
+      "type": "radio",
+      "options": ["0", "1", "2", "3", "4", "5 or more"],
+      "required": true
+    },
+    {
+      "text": "Which lessons from the platform did you use for your regular lesson(s) or limited devices lesson(s)? If none were taught, write 'NA'",
+      "type": "text",
+      "required": true
+    },
+    {
+      "text": "List the name of the lessons that were covered",
+      "type": "text",
+      "required": true
+    },
+    {
+      "text": "Were there any unplugged sessions? If yes, mention how many. *Note that you need to upload picture evidence later",
+      "type": "radio",
+      "options": ["0", "1", "2", "3", "4", "5 or more"],
+      "required": true
+    },
+    {
+      "text": "If none were taught, why? *Select all that apply*",
+      "type": "checkbox",
+      "options": [
+        "Doesn't apply, lessons were taught",
+        "There was not enough time this month",
+        "Not enough devices",
+        "No internet access",
+        "Teacher needs help organizing",
+        "No interest from the students",
+        "Teacher is on long leave",
+        "Teacher is subject teaching but not science and technology",
+        "Teacher is no longer in the primary level"
+      ],
+      "required": true
+    },
+    {
+      "text": "Upload the evidence from the unplugged session",
+      "type": "file",
+      "required": false,
+      "max_files": 5,
+      "max_file_size_mb": 10
+    },
+    {
+      "text": "Add a brief description for the unplugged/limited devices session(s), and the number of students who participated. *If none were taught, write 'NA'",
+      "type": "text",
+      "required": true
+    },
+    {
+      "text": "How many hours per week do you spend teaching computer science curriculum?",
+      "type": "radio",
+      "options": [
+        "No lesson",
+        "Less than 30 min",
+        "Between 30 min and 1 hour",
+        "Between 1 hour and 2 hours",
+        "More than 2 hours"
+      ],
+      "required": true
+    },
+    {
+      "text": "How easy/difficult did your students find the curriculum?",
+      "type": "radio",
+      "options": [
+        "No lesson taught",
+        "1 (Very Difficult)",
+        "2",
+        "3",
+        "4",
+        "5 (Very Easy)"
+      ],
+      "required": true
+    },
+    {
+      "text": "How easy/difficult was it for you to implement the curriculum?",
+      "type": "radio",
+      "options": [
+        "No lesson taught",
+        "1 (Very Difficult)",
+        "2",
+        "3",
+        "4",
+        "5 (Very Easy)"
+      ],
+      "required": true
+    },
+    {
+      "text": "How would you rate the curriculum overall?",
+      "type": "radio",
+      "options": [
+        "No lesson taught",
+        "1 (Positive)",
+        "2",
+        "3",
+        "4",
+        "5 (Negative)"
+      ],
+      "required": true
+    },
+    {
+        "text": "List here any questions and/or comments the teachers would like to report",
+        "type": "text",
+        "required": true
+      },
+      {
+        "text": "Has the teacher experienced any issue with equipment provided by the Ministry or Code Caribbean? (You can select more than one)",
+        "type": "checkbox",
+        "options": [
+          "None",
+          "Laptop",
+          "Micro-bit"
+        ],
+        "required": true
+      },
+      {
+        "text": "If yes, please explain the issue.",
+        "type": "text",
+        "required": false
+      }
+
+  ]
+  

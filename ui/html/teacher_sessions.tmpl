@@ -3,5 +3,32 @@
 <div class="container">
     <h1>{{.Title}}</h1>
     <p>Teacher Sessions Page</p>
+    <p>Here you can manage your teacher sessions.</p>
+    <div class="buttons">
+        <button onclick="location.href='/coach/new_session'">New Session</button>
+        <button onclick="location.href='/coach/dashboard'">Back to Dashboard</button>
+        <button onclick="location.href='/coach/logout'">Logout</button>
+
 </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Session ID</th>
+                <th>Session Name</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{ range .Sessions }}
+                <tr>
+                    <td>{{ .ID }}</td>
+                    <td>{{ .Name }}</td>
+                    <td>
+                        <a href="/coach/session/{{ .ID }}">View</a> |
+                        <a href="/coach/session/delete/{{ .ID }}">Delete</a>
+                    </td>
+                </tr>
+            {{ end }}
+        </tbody>
+    </table>
 {{ end }}

@@ -2,19 +2,21 @@ package main
 
 import (
 	"encoding/json"
-	"database/sql"
 	"fmt"
+	"html/template"
 	"net/http"
 
+	//"github.com/cohune-cabbage/di/internal/validator"
+	"strconv"
+
 	"github.com/cohune-cabbage/di/internal/data"
-	"github.com/cohune-cabbage/di/internal/validator"
-	"golang.org/x/crypto/bcrypt"
 )
 
 func (app *application) serverError(w http.ResponseWriter, _ error) {
 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
 
+// to get to pages
 func (app *application) homepage(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the user's name from a cookie (or session)
 	cookie, err := r.Cookie("user_name")
@@ -42,262 +44,183 @@ func (app *application) homepage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (app *application) signupHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
-		data := &TemplateData{
-			Title: "Sign Up",
-		}
-		err := app.render(w, http.StatusOK, "signup.tmpl", data)
-		if err != nil {
-			app.logger.Error("failed to render template", "template", "signup.tmpl", "url", r.URL, "method", r.Method, "error", err)
-			app.serverError(w, err)
-		}
-		return
+func (app *application) LoginPageHandler(w http.ResponseWriter, r *http.Request) {
+	data := &TemplateData{
+		Title:           "Login",
+		HeaderText:      "Login to V-Coach",
+		PageDescription: "Your virtual coaching assistant.",
+		NavLogo:         "static/images/logo.svg",
 	}
-
+	err := app.render(w, http.StatusOK, "login.tmpl", data)
+	if err != nil {
+		app.logger.Error("failed to render template", "template", "login.tmpl", "url", r.URL, "method", r.Method, "error", err)
+		app.serverError(w, err)
+	}
+}
+func (app *application) SignUpPageHandler(w http.ResponseWriter, r *http.Request) {
+	data := &TemplateData{
+		Title:           "Sign Up",
+		HeaderText:      "Create an Account",
+		PageDescription: "Your virtual coaching assistant.",
+		NavLogo:         "static/images/logo.svg",
+	}
+	err := app.render(w, http.StatusOK, "signup.tmpl", data)
+	if err != nil {
+		app.logger.Error("failed to render template", "template", "signup.tmpl", "url", r.URL, "method", r.Method, "error", err)
+		app.serverError(w, err)
+	}
+}
+func (app *application) AddUserHandler(w http.ResponseWriter, r *http.Request) {
+	parseIntPointer := func(value string) *int {
+		if value == "" {
+			return nil
+		}
+		parsed, err := strconv.Atoi(value)
+		if err != nil {
+			return nil
+		}
+		return &parsed
+	}
+	// Parse the form data
 	err := r.ParseForm()
 	if err != nil {
-		app.logger.Error("failed to parse form", "url", r.URL, "method", r.Method, "error", err)
-		app.serverError(w, err)
-		return
+		// Remove misplaced lines and ensure proper struct initialization
 	}
-
+	// Create a new SignUp struct and populate it with the form data
 	signup := &data.SignUp{
-		Name:     r.PostForm.Get("name"),
-		Email:    r.PostForm.Get("email"),
-		Password: r.PostForm.Get("password"),
-		Role:     r.PostForm.Get("role"),
+		Name:     r.FormValue("name"),
+		Email:    r.FormValue("email"),
+		Password: r.FormValue("password"),
+		Role:     r.FormValue("role"),
+		Age:      parseIntPointer(r.FormValue("age")),
+		SchoolID: parseIntPointer(r.FormValue("school_id")),
+		CoachID:  parseIntPointer(r.FormValue("coach_id")),
 	}
-
-	// Hash the password before saving it to the database
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(signup.Password), bcrypt.DefaultCost)
+	// Validate the signup data
+	err = app.signUpModel.ValidateSignUp(signup)
 	if err != nil {
+		app.logger.Error("failed to validate signup data", "url", r.URL, "method", r.Method, "error", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	// Insert the new user into the database
+	err = app.signUpModel.InsertUser(signup)
+	if err != nil {
+		app.logger.Error("failed to insert user into database", "url", r.URL, "method", r.Method, "error", err)
 		app.serverError(w, err)
 		return
 	}
-	signup.Password = string(hashedPassword)
-
-	// Insert the user into the database
-	err = &app.signUpModel.Insert(signup)
-	if err != nil {
-		if err.Error() == "a user with this email already exists" {
-			http.Error(w, "A user with this email already exists", http.StatusConflict)
-			return
-		}
-		app.serverError(w, err)
-		return
-	}
-
-	// Log the submitted data for debugging before inserting
-	app.logger.Info("submitted sign up data", "data", signUp)
-
 	// Redirect to the login page after successful signup
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
-func (app *application) InterviewHandler(w http.ResponseWriter, r *http.Request) {
-	// Example: get the first active question for the logged-in teacher
-	userID, err := app.getUserID(r.Header.Get("User-ID")) // Assuming the user ID is passed in the "User-ID" header
-	if err != nil {
-		app.serverError(w, err)
-		return
-	}
-	//no need for getting role because we are assuming the user is a teacher beause all users are teachers
-	question, err := app.GetNextQuestionForTeacher(r.Context(), userID)
-	if err != nil {
-		app.serverError(w, err)
-		return
-	}
-	if err != nil {
-		app.serverError(w, err)
-		return
-	}
-
-	// Create a JSON-serializable struct for the template
-	q := &data.QuestionData{
-		ID:       question.ID,
-		Text:     question.Text,
-		Type:     question.Type,
-		Required: question.Required,
-	}
-
-	if question.Type == "checkbox" || question.Type == "radio" || question.Type == "scale" {
-		q.Options = question.Options
-	}
-	// Render the template with the question data
+func (app *application) CoachDashBoardHandler(w http.ResponseWriter, r *http.Request) {
 	data := &TemplateData{
-		Title:    "Interview",
-		Question: q,
+		Title:           "Coach Dashboard",
+		HeaderText:      "Welcome to Your Dashboard",
+		PageDescription: "Your virtual coaching assistant.",
+
+		NavLogo: "ui/static/images/logo.svg",
 	}
+	err := app.render(w, http.StatusOK, "coach_dashboard.tmpl", data)
+	if err != nil {
+		app.logger.Error("failed to render template", "template", "Coach_dashboard.tmpl", "url", r.URL, "method", r.Method, "error", err)
+		app.serverError(w, err)
+	}
+}
+
+// Render the interview response page it should load one question at a time
+func (app *application) InterviewHandler(w http.ResponseWriter, r *http.Request) {
+	questions, err := app.questionModel.GetActiveQuestions()
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+
+	if len(questions) == 0 {
+		app.logger.Error("No questions found")
+		http.Error(w, "No questions available GO HANDLER .", http.StatusInternalServerError)
+		return
+	}
+
+	qJSON, err := json.Marshal(questions)
+	if err != nil {
+		app.logger.Error("failed to marshal questions to JSON", "error", err)
+		http.Error(w, "Failed to process questions", http.StatusInternalServerError)
+		return
+	}
+
+	data := &TemplateData{
+		Title:           "Interview",
+		HeaderText:      "Interview Questions",
+		PageDescription: "Answer the following questions.",
+		NavLogo:         "static/images/logo.svg",
+		QuestionsJSON:   template.JS(qJSON), // Pass the JSON data to the template
+	}
+
+	//	Render the interview page with the questions
 	err = app.render(w, http.StatusOK, "interview.tmpl", data)
-	if err != nil {
-		app.serverError(w, err)
-	}
-}
-func (app *application) verifyUserCredentials(email, password string) (bool, error) {
-	var hashedPassword string
-	query := `SELECT password FROM users WHERE email = $1`
-	err := app.db.QueryRow(query, email).Scan(&hashedPassword)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return false, nil // User not found
-		}
-		return false, err
-	}
 
-	// Compare the hashed password with the provided password
-	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
-	if err != nil {
-		return false, nil // Password mismatch
-	}
-
-	return true, nil
-}
-
-func (app *application) ManagequestionsHandler(w http.ResponseWriter, r *http.Request) {
-
-	convertToMapInterface := func(input map[string]string) map[string]interface{} {
-		output := make(map[string]interface{})
-		for key, value := range input {
-			output[key] = value
-		}
-		return output
-	}
-	if r.Method == http.MethodGet {
-		data := &TemplateData{
-			Title: "Manage Questions",
-		}
-		err := app.render(w, http.StatusOK, "managequestions.tmpl", data)
-		if err != nil {
-			app.logger.Error("failed to render template", "template", "login.tmpl", "url", r.URL, "method", r.Method, "error", err)
-			app.serverError(w, err)
-		}
-		return
-	}
-
-	err := r.ParseForm()
-	if err != nil {
-		app.logger.Error("failed to parse form", "url", r.URL, "method", r.Method, "error", err)
-		app.serverError(w, err)
-		return
-	}
-
-	qd := &data.QuestionData{
-		Text:                  r.PostForm.Get("question"),
-		Type:                  r.PostForm.Get("question_type"),
-		AllowConfidenceRating: r.PostForm.Get("allow_confidence_rating") == "on",
-	}
-
-	v := validator.NewValidator()
-	v.Check(validator.NotBlank(qd.Text), "question", "Question cannot be blank")
-	v.Check(validator.NotBlank(qd.Type), "question_type", "Question type cannot be blank")
-	v.Check(validator.IsValidQuestionType(qd.Type), "question_type", "Invalid question type")
-
-	options :=
-		r.PostForm["options"] // Assuming options are sent as a slice of strings
-	if len(options) > 0 {
-		qd.Options = make([]string, len(options))
-		for i, option := range options {
-			qd.Options[i] = option
-		}
-	}
-	v.Check(validator.MinLength(qd.Text, 5), "question", "Question must be at least 5 characters long")
-	v.Check(validator.MaxLength(qd.Text, 100), "question", "Question must be at most 100 characters long")
-	v.Check(validator.MinLength(qd.Type, 3), "question_type", "Question type must be at least 3 characters long")
-	v.Check(validator.MaxLength(qd.Type, 20), "question_type", "Question type must be at most 20 characters long")
-	if !v.ValidData() {
-		data := &TemplateData{
-			Title:        "Manage Questions",
-			QuestionData: qd,
-			Data:         convertToMapInterface(v.Errors),
-		}
-		err := app.render(w, http.StatusUnprocessableEntity, "managequestions.tmpl", data)
-		if err != nil {
-			app.logger.Error("failed to render template", "template", "login.tmpl", "url", r.URL, "method", r.Method, "error", err)
-			app.serverError(w, err)
-		}
-		return
-	}
-
-	// Log the submitted data for debugging before inserting
-	app.logger.Info("submitted login data", "data", login)
-
-	// Save the question data to the database
-	id, err := app.InsertQuestion(r.Context(), qd)
 	if err != nil {
 		app.logger.Error("failed to render template", "template", "interview.tmpl", "url", r.URL, "method", r.Method, "error", err)
 		app.serverError(w, err)
 		return
 	}
-	// Optionally, you can use the `id` variable if needed
-	_ = id
-	// Redirect to the interview page after successful insertion
+}
+func (app *application) SubmitInterviewResponseHandler(w http.ResponseWriter, r *http.Request) {
+	var submission struct {
+		Answers []struct {
+			QuestionID int    `json:"question_id"`
+			Answer     string `json:"answer"`
+		} `json:"answers"`
+	}
 
-	http.Redirect(w, r, "/interview", http.StatusSeeOther)
+	err := json.NewDecoder(r.Body).Decode(&submission)
+	if err != nil {
+		app.logger.Error("failed to decode JSON body", "url", r.URL, "method", r.Method, "error", err)
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	for _, ans := range submission.Answers {
+		response := &data.InterviewResponse{
+			QuestionID: ans.QuestionID,
+			Text:       ans.Answer,
+		}
+
+		err = app.InterviewResponseModel.InsertInterviewResponse(response)
+		if err != nil {
+			app.logger.Error("failed to insert interview response", "questionID", ans.QuestionID, "url", r.URL, "method", r.Method, "error", err)
+			app.serverError(w, err)
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Responses submitted successfully"))
 }
 
-func (app *application) CoachDashboardHandler(w http.ResponseWriter, r *http.Request) {
-	data := &TemplateData{
-		Title: "Coach Dashboard",
-	}
-	err := app.render(w, http.StatusOK, "coach_dashboard.tmpl", data)
+func (app *application) GetNextQuestionHandler(w http.ResponseWriter, r *http.Request) {
+	// Parse the form data
+	err := r.ParseForm()
 	if err != nil {
-		app.logger.Error("failed to render template", "template", "coach_dashboard.tmpl", "url", r.URL, "method", r.Method, "error", err)
-		app.serverError(w, err)
+		app.logger.Error("failed to parse form data", "url", r.URL, "method", r.Method, "error", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
-}
-
-func (app *application) ManageQuestionsHandler(w http.ResponseWriter, r *http.Request) {
-	data := &TemplateData{
-		Title: "Manage Questions",
+	// Create a new InterviewResponse struct and populate it with the form data
+	response := &data.InterviewResponse{
+		Text:                  r.FormValue("text"),
+		Questiontype:          r.FormValue("type"),
+		Options:               r.Form["options"],
+		AllowConfidenceRating: r.FormValue("allow_confidence_rating") == "on",
+		Required:              r.FormValue("required") == "on",
 	}
-	err := app.render(w, http.StatusOK, "manage_questions.tmpl", data)
+	// Validate the interview response data
+	err = app.InterviewResponseModel.ValidateInterviewResponse(response)
 	if err != nil {
-		app.logger.Error("failed to render template", "template", "manage_questions.tmpl", "url", r.URL, "method", r.Method, "error", err)
-		app.serverError(w, err)
-	}
-}
-
-func (app *application) EditQuestionHandler(w http.ResponseWriter, r *http.Request) {
-	data := &TemplateData{
-		Title: "Edit Question",
-	}
-	err := app.render(w, http.StatusOK, "edit_question.tmpl", data)
-	if err != nil {
-		app.logger.Error("failed to render template", "template", "edit_question.tmpl", "url", r.URL, "method", r.Method, "error", err)
-		app.serverError(w, err)
-	}
-}
-
-func (app *application) NewQuestionHandler(w http.ResponseWriter, r *http.Request) {
-	data := &TemplateData{
-		Title: "New Question",
-	}
-	err := app.render(w, http.StatusOK, "new_question.tmpl", data)
-	if err != nil {
-		app.logger.Error("failed to render template", "template", "new_question.tmpl", "url", r.URL, "method", r.Method, "error", err)
-		app.serverError(w, err)
-	}
-}
-
-func (app *application) TeacherSessionsHandler(w http.ResponseWriter, r *http.Request) {
-	data := &TemplateData{
-		Title: "Teacher Sessions",
-	}
-	err := app.render(w, http.StatusOK, "teacher_sessions.tmpl", data)
-	if err != nil {
-		app.logger.Error("failed to render template", "template", "teacher_sessions.tmpl", "url", r.URL, "method", r.Method, "error", err)
-		app.serverError(w, err)
-	}
-}
-
-func (app *application) DeleteTeacherHandler(w http.ResponseWriter, r *http.Request) {
-	data := &TemplateData{
-		Title: "Delete Teacher",
-	}
-	err := app.render(w, http.StatusOK, "delete_teacher.tmpl", data)
-	if err != nil {
-		app.logger.Error("failed to render template", "template", "delete_teacher.tmpl", "url", r.URL, "method", r.Method, "error", err)
-		app.serverError(w, err)
+		app.logger.Error("failed to validate interview response data", "url", r.URL, "method", r.Method, "error", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 }
