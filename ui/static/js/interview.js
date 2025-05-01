@@ -1,11 +1,16 @@
 let currentIndex = 0;
-const questions = fetchQuestions();
 const answers = [];
 const questionEl = document.getElementById("question-area");
 const inputField = document.getElementById("input-field");
 const form = document.getElementById("answer-form");
 const finishArea = document.getElementById("finish-area");
 const voiceBtn = document.getElementById("start-voice");
+
+console.log("Loaded Questions:", questions);
+
+if (questions.length === 0) {
+  console.warn("No questions available for the interview");
+}
 
 function renderQuestion() {
   const q = questions[currentIndex];
