@@ -14,7 +14,6 @@ func (app *application) routes() http.Handler {
 	mux.HandleFunc("/User/signup", app.AddUserHandler)
 	mux.HandleFunc("/coach_dashboard", app.CoachDashBoardHandler)
 	mux.HandleFunc("/interview", app.InterviewHandler)
-	mux.HandleFunc("/interview/submit", app.SubmitInterviewResponseHandler)
-
+	mux.HandleFunc("/validate/login", app.ValidateLoginHandler)
 	return app.loggingMiddleware(mux)
 }

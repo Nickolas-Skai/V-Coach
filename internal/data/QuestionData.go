@@ -11,13 +11,13 @@ import (
 
 // Question represents a question in the system.
 type QuestionData struct {
-	ID       int    `json:"id"`
-	Text     string `json:"text"`
-	Type     string `json:"type"`
-	AudioURL string `json:"audio_url"`
-	ImageURL string `json:"image_url"`
-	Options  []byte `json:"options"`
-	Required bool   `json:"required"`
+	ID       int      `json:"id"`
+	Text     string   `json:"text"`
+	Type     string   `json:"type"`
+	AudioURL string   `json:"audio_url"`
+	ImageURL string   `json:"image_url"`
+	Options  []string `json:"options"`
+	Required bool     `json:"required"`
 }
 type QuestionModel struct {
 	DB        *sql.DB
@@ -26,6 +26,7 @@ type QuestionModel struct {
 	Text      string
 	Type      string
 	Options   []string
+	Required  bool
 }
 type InterviewResponse struct {
 	ID                    int

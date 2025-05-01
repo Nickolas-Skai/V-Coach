@@ -69,7 +69,7 @@ func (m *LoginModel) GetByEmail(email string) (*Login, error) {
 }
 func (m *LoginModel) Update(login *Login) error {
 	// Update the login in the database
-	query := `UPDATE logins SET email = $1, password = $2, role = $3 WHERE id = $4`
+	query := `UPDATE users SET email = $1, password_hash = $2, role = $3 WHERE id = $4`
 	args := []interface{}{login.Email, login.Password, login.Role, login.ID}
 	_, err := m.DB.Exec(query, args...)
 	if err != nil {
@@ -79,7 +79,7 @@ func (m *LoginModel) Update(login *Login) error {
 }
 func (m *LoginModel) Delete(id int64) error {
 	// Delete the login from the database
-	query := `DELETE FROM logins WHERE id = $1`
+	query := `DELETE FROM users WHERE id = $1`
 	_, err := m.DB.Exec(query, id)
 	if err != nil {
 		return err
@@ -88,7 +88,7 @@ func (m *LoginModel) Delete(id int64) error {
 }
 func (m *LoginModel) GetByID(id int64) (*Login, error) {
 	// Retrieve the login from the database by ID
-	query := `SELECT id, email, password, created_at, role FROM logins WHERE id = $1`
+	query := `SELECT id, email, password_hash, created_at, role FROM users WHERE id = $1`
 	row := m.DB.QueryRow(query, id)
 
 	var login Login
@@ -102,8 +102,8 @@ func (m *LoginModel) GetByID(id int64) (*Login, error) {
 	return &login, nil
 }
 func (m *LoginModel) GetAll() ([]*Login, error) {
-	// Retrieve all logins from the database
-	query := `SELECT id, email, password, created_at, role FROM logins`
+	// Retrieve all users from the database
+	query := `SELECT id, email, password_hash, created_at, role FROM users`
 	rows, err := m.DB.Query(query)
 	if err != nil {
 		return nil, err
@@ -123,7 +123,7 @@ func (m *LoginModel) GetAll() ([]*Login, error) {
 }
 func (m *LoginModel) GetByRole(role string) ([]*Login, error) {
 	// Retrieve logins from the database by role
-	query := `SELECT id, email, password, created_at, role FROM logins WHERE role = $1`
+	query := `SELECT id, email, password_hash, created_at, role FROM users WHERE role = $1`
 	rows, err := m.DB.Query(query, role)
 	if err != nil {
 		return nil, err
@@ -143,7 +143,7 @@ func (m *LoginModel) GetByRole(role string) ([]*Login, error) {
 }
 func (m *LoginModel) GetByEmailAndPassword(email, password string) (*Login, error) {
 	// Retrieve the login from the database by email and password
-	query := `SELECT id, email, password, created_at, role FROM logins WHERE email = $1 AND password = $2`
+	query := `SELECT id, email, password_hash, created_at, role FROM users WHERE email = $1 AND password = $2`
 	row := m.DB.QueryRow(query, email, password)
 
 	var login Login
@@ -158,7 +158,7 @@ func (m *LoginModel) GetByEmailAndPassword(email, password string) (*Login, erro
 }
 func (m *LoginModel) GetByEmailAndRole(email, role string) (*Login, error) {
 	// Retrieve the login from the database by email and role
-	query := `SELECT id, email, password, created_at, role FROM logins WHERE email = $1 AND role = $2`
+	query := `SELECT id, email, password_hash, created_at, role FROM users WHERE email = $1 AND role = $2`
 	row := m.DB.QueryRow(query, email, role)
 
 	var login Login
@@ -166,6 +166,46 @@ func (m *LoginModel) GetByEmailAndRole(email, role string) (*Login, error) {
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil // No login found with the given email and role
+		}
+		return nil, err // Some other error occurred
+	}
+	return &login, nil
+}
+
+//get user by email
+
+func (m *LoginModel) GetUserByEmail(email string) (*Login, error) {
+	// Retrieve the user from the database by email
+	query := `SELECT id, email, password_hash, created_at, role FROM users WHERE email = $1`
+	row := m.DB.QueryRow(query, email)
+
+	var login Login
+	err := row.Scan(&login.ID, &login.Email, &login.Password, &login.CreatedAt, &login.Role)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil // No user found with the given email
+		}
+		return nil, err // Some other error occurred
+	}
+	return &login, nil
+}
+func (m *LoginModel) CheckPassword(user *Login, password string) error {
+	// Check if the provided password matches the stored password
+	if user.Password != password {
+		return fmt.Errorf("invalid password")
+	}
+	return nil
+}
+func (m *LoginModel) GetUserByID(id int64) (*Login, error) {
+	// Retrieve the user from the database by ID
+	query := `SELECT id, email, password_hash, created_at, role FROM users WHERE id = $1`
+	row := m.DB.QueryRow(query, id)
+
+	var login Login
+	err := row.Scan(&login.ID, &login.Email, &login.Password, &login.CreatedAt, &login.Role)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil // No user found with the given ID
 		}
 		return nil, err // Some other error occurred
 	}

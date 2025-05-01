@@ -7,30 +7,49 @@
   <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
-  <div class="interview-container">
-    <div class="chat-header">🎤 V-Coach Interview</div>
-    <div id="chat-window">
-      <div id="question-area" class="bot-bubble"></div>
-      <form id="answer-form" enctype="multipart/form-data">
-        <div id="input-field"></div>
-        <div class="input-controls">
-          <button type="button" id="start-voice">🎙️ Speak</button>
-          <button type="submit" id="next-btn">Next</button>
-        </div>
-      </form>
-      <div id="finish-area" style="display:none;">
-        <button id="submit-all">✅ Submit Interview</button>
+<div class="interview-container">
+  <div class="chat-header">🎤 V-Coach Interview</div>
+
+  <form id="interview-form" method="POST" action="/submit-question">
+    {{ range .Questions }}
+      <div class="question-block" data-question="{{ .Text }}">
+        <p class="question-text">{{ .Text }}</p>
+
+        {{ if eq .Type "text" }}
+          <textarea name="answer" rows="3" required></textarea>
+
+        {{ else if or (eq .Type "radio") (eq .Type "scale") }}
+          {{ $id := .ID }}
+          {{ range .Options }}
+            <label><input type="radio" name="answer" value="{{ . }}" required> {{ . }}</label><br>
+          {{ end }}
+
+        {{ else if eq .Type "checkbox" }}
+          {{ $id := .ID }}
+          {{ range .Options }}
+            <label><input type="checkbox" name="answer" value="{{ . }}"> {{ . }}</label><br>
+          {{ end }}
+
+        {{ else if eq .Type "file" }}
+          <input type="file" name="answer">
+        {{ end }}
+
+        <input type="hidden" name="question_id" value="{{ .ID }}">
       </div>
-    </div>
-  </div>
-  <script>
-    const questions = {{ .QuestionsJSON }};
-    console.log("Loaded Questions:", questions);
-    if (questions.length === 0) {
-      console.warn("No questions available for the interview");
-    }
-  </script>
-  <script src="/static/js/interview.js"></script>
+    {{ end }}
+    <button type="button" id="next-question">Next Question</button>
+    <button type="button" id="prev-question">Previous Question</button>
+    <button type="submit">Submit</button>
+  </form>
+
+  <button id="speak-current" type="button">🔊 Read Question</button>
+  <button id="voice-fill" type="button">🎤 Voice Input</button>
+</div>
+<script>
+  const questions = {{ .Questions }};
+</script>
+
+<script src="/static/js/speech.js"></script>
 </body>
 </html>
 {{ end }}

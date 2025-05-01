@@ -3,9 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"html/template"
 	"net/http"
-	"strings"
 
 	//"github.com/cohune-cabbage/di/internal/validator"
 	"strconv"
@@ -17,36 +15,22 @@ func (app *application) serverError(w http.ResponseWriter, _ error) {
 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
 
-func (app *application) clientError(w http.ResponseWriter, status int) {
-	http.Error(w, http.StatusText(status), status)
-}
-
 // to get to pages
 func (app *application) homepage(w http.ResponseWriter, r *http.Request) {
-	// Retrieve the user's name from a cookie (or session)
-	cookie, err := r.Cookie("user_name")
-	var greeting string
-	if err == nil {
-		// If the cookie exists, use the user's name for the greeting
-		greeting = fmt.Sprintf("Welcome back, %s!", cookie.Value)
-	} else {
-		// If no cookie is found, use a default greeting
-		greeting = "Welcome to V-Coach!"
-	}
 
-	// Pass the greeting to the template
 	data := &TemplateData{
 		Title:           "Home",
 		HeaderText:      "Welcome to V-Coach",
-		Greeting:        greeting,
 		PageDescription: "Your virtual coaching assistant.",
 		NavLogo:         "static/images/logo.svg",
+		Greeting:        "",
 	}
-	err = app.render(w, http.StatusOK, "homepage.tmpl", data)
+	err := app.render(w, http.StatusOK, "homepage.tmpl", data)
 	if err != nil {
 		app.logger.Error("failed to render template", "template", "homepage.tmpl", "url", r.URL, "method", r.Method, "error", err)
 		app.serverError(w, err)
 	}
+
 }
 
 func (app *application) LoginPageHandler(w http.ResponseWriter, r *http.Request) {
@@ -60,6 +44,57 @@ func (app *application) LoginPageHandler(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		app.logger.Error("failed to render template", "template", "login.tmpl", "url", r.URL, "method", r.Method, "error", err)
 		app.serverError(w, err)
+	}
+}
+func (app *application) ValidateLoginHandler(w http.ResponseWriter, r *http.Request) {
+	// Parse the form data
+	err := r.ParseForm()
+	if err != nil {
+		app.logger.Error("failed to parse form data", "url", r.URL, "method", r.Method, "error", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	// Create a new Login struct and populate it with the form data
+	login := &data.Login{
+		Email:    r.FormValue("email"),
+		Password: r.FormValue("password"),
+	}
+	// Validate the login data
+	err = app.loginModel.ValidateLogin(login)
+	if err != nil {
+		app.logger.Error("failed to validate login data", "url", r.URL, "method", r.Method, "error", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	// Check if the user exists in the database
+	user, err := app.loginModel.GetUserByEmail(login.Email)
+	if err != nil {
+		app.logger.Error("failed to get user by email", "url", r.URL, "method", r.Method, "error", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if user == nil {
+		app.logger.Error("user not found", "url", r.URL, "method", r.Method)
+		http.Error(w, "User not found", http.StatusUnauthorized)
+		return
+	}
+	// Check if the password is correct
+	err = app.loginModel.CheckPassword(user, login.Password)
+	if err != nil {
+		app.logger.Error("failed to check password", "url", r.URL, "method", r.Method, "error", err)
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	// Set a cookie with the user's name
+	http.SetCookie(w, &http.Cookie{
+		Name:  "user_name",
+		Value: user.Email,
+	})
+	// Redirect to the dashboard after successful login and is a coach if not redirect to the homepage with name greeting
+	if user.Role == "coach" {
+		http.Redirect(w, r, "/coach_dashboard", http.StatusSeeOther)
+	} else {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 	}
 }
 func (app *application) SignUpPageHandler(w http.ResponseWriter, r *http.Request) {
@@ -137,7 +172,6 @@ func (app *application) CoachDashBoardHandler(w http.ResponseWriter, r *http.Req
 // handlers.go (InterviewHandler with embedded questions and logic)
 // InterviewHandler with dynamic question serving
 func (app *application) InterviewHandler(w http.ResponseWriter, r *http.Request) {
-	// Step 1: Load all active questions from the database
 	questions, err := app.questionModel.GetActiveQuestions()
 	if err != nil {
 		app.logger.Error("Failed to fetch interview questions", "error", err)
@@ -145,74 +179,51 @@ func (app *application) InterviewHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Step 2: Return JSON for dynamic use or render template based on Accept header
-	accept := r.Header.Get("Accept")
-	if strings.Contains(accept, "application/json") {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(questions)
-		return
-	}
-
-	// Step 3: Marshal questions to embed into template if rendering as HTML
-	qJSON, err := json.Marshal(questions)
-	if err != nil {
-		app.logger.Error("Failed to marshal questions to JSON", "error", err)
-		app.serverError(w, err)
-		return
-	}
-
-	// Add console.log statement to log the questions variable
-	fmt.Println("Loaded Questions:", string(qJSON))
-
-	// Add a check to handle the case when the questions list is empty
 	if len(questions) == 0 {
 		app.logger.Warn("No questions available for the interview")
+		http.Error(w, "No interview questions available", http.StatusNotFound)
+		return
+	}
+
+	// Read the current question index from the query param
+	qIndexStr := r.URL.Query().Get("q")
+	qIndex := 0
+	if qIndexStr != "" {
+		parsed, err := strconv.Atoi(qIndexStr)
+		if err == nil && parsed >= 0 && parsed < len(questions) {
+			qIndex = parsed
+		}
+	}
+
+	// Pick only the current question
+	q := questions[qIndex]
+	questionData := &data.QuestionData{
+		ID:   q.ID,
+		Text: q.Text,
+		Type: q.Type,
+		Options: func() []string {
+			optionsJSON, _ := json.Marshal(q.Options)
+			var options []string
+			json.Unmarshal(optionsJSON, &options)
+			return options
+		}(),
+		Required: q.Required,
 	}
 
 	data := &TemplateData{
-		Title:         "Interview",
-		QuestionsJSON: template.JS(qJSON),
+		Title:     fmt.Sprintf("Interview Question %d", qIndex+1),
+		Questions: []*data.QuestionData{questionData},
 	}
 
 	err = app.render(w, http.StatusOK, "interview.tmpl", data)
 	if err != nil {
-		app.logger.Error("Failed to render interview page", "error", err)
+		app.logger.Error("Failed to render interview question", "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-	}
-}
-
-func (app *application) SubmitInterviewResponseHandler(w http.ResponseWriter, r *http.Request) {
-	var submission struct {
-		Answers []struct {
-			QuestionID int    `json:"question_id"`
-			Answer     string `json:"answer"`
-		} `json:"answers"`
-	}
-
-	err := json.NewDecoder(r.Body).Decode(&submission)
-	if err != nil {
-		app.logger.Error("invalid interview response json", "error", err)
-		app.clientError(w, http.StatusBadRequest)
 		return
 	}
 
-	for _, ans := range submission.Answers {
-		if strings.TrimSpace(ans.Answer) == "" || ans.QuestionID <= 0 {
-			app.logger.Error("validation failed", "answer", ans)
-			http.Error(w, "Validation error: missing or invalid answer.", http.StatusBadRequest)
-			return
-		}
+}
 
-		response := &data.InterviewResponse{
-			QuestionID: ans.QuestionID,
-			Answer:     ans.Answer,
-		}
-		if err := app.InterviewResponseModel.InsertInterviewResponse(response); err != nil {
-			app.logger.Error("failed to insert response", "question_id", ans.QuestionID, "error", err)
-			app.serverError(w, err)
-			return
-		}
-	}
+func (app *application) SubmitResponseHandler(w http.ResponseWriter, r *http.Request) {
 
-	w.WriteHeader(http.StatusOK)
 }

@@ -52,7 +52,13 @@
         <div class="links">
             <a href="/interview">Start A Session</a>
             <a href="/contact">Contact</a>
-            <a href="/help">Help</a>
+            <a href="/about">About</a>
+            {{ if .IsLoggedIn }}
+                <a href="/logout">Logout</a>
+                 <a href="/help">Help</a>
+            {{ else }}
+                <a href="/help">Help</a>
+            {{ end }}
         </div>
     </nav>
 

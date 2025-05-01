@@ -36,10 +36,14 @@ type TemplateData struct {
 	QuestionDataDB        *data.QuestionModel
 	ErrorMessage          string
 	Data                  map[string]interface{}
-	Questions             []Question  // Add this field for questions
-	QuestionsJSON         template.JS // Add this field for JSON representation of questions
+	Questions             []*data.QuestionData // Add this field for questions
+	QuestionsJSON         template.JS          // Add this field for JSON representation of questions
 	InterviewResponse     *data.InterviewResponseModel
 	InterviewResponseJSON *data.InterviewResponseModel
+	IsLoggedIn            bool
+	NextURL               string
+	ShowNextButton        bool
+	PreviousURL           string
 }
 
 func NewTemplateData() *TemplateData {
