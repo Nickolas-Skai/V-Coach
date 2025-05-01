@@ -1,42 +1,32 @@
-<!-- interview.tmpl -->
 {{ define "content" }}
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>V-Coach Interview</title>
+  <title>{{ .Title }}</title>
   <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
-<div class="interview-container">
-  <div class="chat-header">V-Coach Interview</div>
-
-  <div id="question-area"></div>
-
-  <div class="input-area">
-    <form id="answer-form" enctype="multipart/form-data">
-      <div id="input-field"></div>
-      <div id="voice-controls">
-        <button type="button" id="start-voice">🎤 Speak</button>
+  <div class="interview-container">
+    <div class="chat-header">🎤 V-Coach Interview</div>
+    <div id="chat-window">
+      <div id="question-area" class="bot-bubble"></div>
+      <form id="answer-form" enctype="multipart/form-data">
+        <div id="input-field"></div>
+        <div class="input-controls">
+          <button type="button" id="start-voice">🎙️ Speak</button>
+          <button type="submit" id="next-btn">Next</button>
+        </div>
+      </form>
+      <div id="finish-area" style="display:none;">
+        <button id="submit-all">✅ Submit Interview</button>
       </div>
-      <button type="submit" id="next-btn">Next</button>
-    </form>
+    </div>
   </div>
-
-  <div id="finish-area" style="display:none;">
-    <button id="submit-all">Submit All Answers</button>
-  </div>
-
-</div>
-<!-- Include the necessary scripts -->
-<script>
-const questions = {{ .QuestionsJSON}};
-console.log("Loaded Questions:", {{ .QuestionsJSON }});
-
-</script>
-
-<script src="/static/js/interview.js"></script>
-
+  <script>
+    const questions = {{ .QuestionsJSON }};
+  </script>
+  <script src="/static/js/interview.js"></script>
 </body>
 </html>
 {{ end }}

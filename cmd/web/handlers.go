@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"strings"
 
 	//"github.com/cohune-cabbage/di/internal/validator"
 	"strconv"
@@ -14,6 +15,10 @@ import (
 
 func (app *application) serverError(w http.ResponseWriter, _ error) {
 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+}
+
+func (app *application) clientError(w http.ResponseWriter, status int) {
+	http.Error(w, http.StatusText(status), status)
 }
 
 // to get to pages
@@ -129,44 +134,45 @@ func (app *application) CoachDashBoardHandler(w http.ResponseWriter, r *http.Req
 	}
 }
 
-// Render the interview response page it should load one question at a time
+// handlers.go (InterviewHandler with embedded questions and logic)
+// InterviewHandler with dynamic question serving
 func (app *application) InterviewHandler(w http.ResponseWriter, r *http.Request) {
+	// Step 1: Load all active questions from the database
 	questions, err := app.questionModel.GetActiveQuestions()
 	if err != nil {
+		app.logger.Error("Failed to fetch interview questions", "error", err)
 		app.serverError(w, err)
 		return
 	}
 
-	if len(questions) == 0 {
-		app.logger.Error("No questions found")
-		http.Error(w, "No questions available GO HANDLER .", http.StatusInternalServerError)
+	// Step 2: Return JSON for dynamic use or render template based on Accept header
+	accept := r.Header.Get("Accept")
+	if strings.Contains(accept, "application/json") {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(questions)
 		return
 	}
 
+	// Step 3: Marshal questions to embed into template if rendering as HTML
 	qJSON, err := json.Marshal(questions)
 	if err != nil {
-		app.logger.Error("failed to marshal questions to JSON", "error", err)
-		http.Error(w, "Failed to process questions", http.StatusInternalServerError)
+		app.logger.Error("Failed to marshal questions to JSON", "error", err)
+		app.serverError(w, err)
 		return
 	}
 
 	data := &TemplateData{
-		Title:           "Interview",
-		HeaderText:      "Interview Questions",
-		PageDescription: "Answer the following questions.",
-		NavLogo:         "static/images/logo.svg",
-		QuestionsJSON:   template.JS(qJSON), // Pass the JSON data to the template
+		Title:         "Interview",
+		QuestionsJSON: template.JS(qJSON),
 	}
 
-	//	Render the interview page with the questions
 	err = app.render(w, http.StatusOK, "interview.tmpl", data)
-
 	if err != nil {
-		app.logger.Error("failed to render template", "template", "interview.tmpl", "url", r.URL, "method", r.Method, "error", err)
-		app.serverError(w, err)
-		return
+		app.logger.Error("Failed to render interview page", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 }
+
 func (app *application) SubmitInterviewResponseHandler(w http.ResponseWriter, r *http.Request) {
 	var submission struct {
 		Answers []struct {
@@ -177,50 +183,28 @@ func (app *application) SubmitInterviewResponseHandler(w http.ResponseWriter, r 
 
 	err := json.NewDecoder(r.Body).Decode(&submission)
 	if err != nil {
-		app.logger.Error("failed to decode JSON body", "url", r.URL, "method", r.Method, "error", err)
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		app.logger.Error("invalid interview response json", "error", err)
+		app.clientError(w, http.StatusBadRequest)
 		return
 	}
 
 	for _, ans := range submission.Answers {
-		response := &data.InterviewResponse{
-			QuestionID: ans.QuestionID,
-			Text:       ans.Answer,
+		if strings.TrimSpace(ans.Answer) == "" || ans.QuestionID <= 0 {
+			app.logger.Error("validation failed", "answer", ans)
+			http.Error(w, "Validation error: missing or invalid answer.", http.StatusBadRequest)
+			return
 		}
 
-		err = app.InterviewResponseModel.InsertInterviewResponse(response)
-		if err != nil {
-			app.logger.Error("failed to insert interview response", "questionID", ans.QuestionID, "url", r.URL, "method", r.Method, "error", err)
+		response := &data.InterviewResponse{
+			QuestionID: ans.QuestionID,
+			Answer:     ans.Answer,
+		}
+		if err := app.InterviewResponseModel.InsertInterviewResponse(response); err != nil {
+			app.logger.Error("failed to insert response", "question_id", ans.QuestionID, "error", err)
 			app.serverError(w, err)
 			return
 		}
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Responses submitted successfully"))
-}
-
-func (app *application) GetNextQuestionHandler(w http.ResponseWriter, r *http.Request) {
-	// Parse the form data
-	err := r.ParseForm()
-	if err != nil {
-		app.logger.Error("failed to parse form data", "url", r.URL, "method", r.Method, "error", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	// Create a new InterviewResponse struct and populate it with the form data
-	response := &data.InterviewResponse{
-		Text:                  r.FormValue("text"),
-		Questiontype:          r.FormValue("type"),
-		Options:               r.Form["options"],
-		AllowConfidenceRating: r.FormValue("allow_confidence_rating") == "on",
-		Required:              r.FormValue("required") == "on",
-	}
-	// Validate the interview response data
-	err = app.InterviewResponseModel.ValidateInterviewResponse(response)
-	if err != nil {
-		app.logger.Error("failed to validate interview response data", "url", r.URL, "method", r.Method, "error", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 }
