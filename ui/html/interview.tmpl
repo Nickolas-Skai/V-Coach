@@ -25,6 +25,10 @@
   </div>
   <script>
     const questions = {{ .QuestionsJSON }};
+    console.log("Loaded Questions:", questions);
+    if (questions.length === 0) {
+      console.warn("No questions available for the interview");
+    }
   </script>
   <script src="/static/js/interview.js"></script>
 </body>

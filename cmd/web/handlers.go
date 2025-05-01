@@ -161,6 +161,14 @@ func (app *application) InterviewHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Add console.log statement to log the questions variable
+	fmt.Println("Loaded Questions:", string(qJSON))
+
+	// Add a check to handle the case when the questions list is empty
+	if len(questions) == 0 {
+		app.logger.Warn("No questions available for the interview")
+	}
+
 	data := &TemplateData{
 		Title:         "Interview",
 		QuestionsJSON: template.JS(qJSON),
