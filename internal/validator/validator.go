@@ -52,18 +52,29 @@ func IsValidEmail(email string) bool {
 }
 
 func IsValidPassword(password string) bool {
-	// Password must be at least 8 characters long and contain at least one digit
+	// Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one digit, and one special character
 	if len(password) < 8 {
 		return false
 	}
+	hasUpper := false
+	hasLower := false
 	hasDigit := false
+	hasSpecial := false
+
 	for _, char := range password {
-		if char >= '0' && char <= '9' {
+		switch {
+		case char >= 'A' && char <= 'Z':
+			hasUpper = true
+		case char >= 'a' && char <= 'z':
+			hasLower = true
+		case char >= '0' && char <= '9':
 			hasDigit = true
-			break
+		case strings.ContainsRune("!@#$%^&*()-_=+[]{}|;:',.<>?/", char):
+			hasSpecial = true
 		}
 	}
-	return hasDigit
+
+	return hasUpper && hasLower && hasDigit && hasSpecial
 }
 
 // IsValidQuestionType checks if the provided question type is valid.

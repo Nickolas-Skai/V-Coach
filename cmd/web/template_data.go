@@ -44,6 +44,11 @@ type TemplateData struct {
 	NextURL               string
 	ShowNextButton        bool
 	PreviousURL           string
+	SuccessMessage        string
+	Schools               []struct {
+		ID   int
+		Name string
+	}
 }
 
 func NewTemplateData() *TemplateData {

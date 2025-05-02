@@ -3,8 +3,10 @@ package data
 import (
 	"database/sql"
 	"fmt"
-	"github.com/cohune-cabbage/di/internal/validator"
 	"time"
+
+	"github.com/cohune-cabbage/di/internal/validator"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Login struct {
@@ -206,6 +208,32 @@ func (m *LoginModel) GetUserByID(id int64) (*Login, error) {
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil // No user found with the given ID
+		}
+		return nil, err // Some other error occurred
+	}
+	return &login, nil
+}
+
+// authenticate user
+func (m *LoginModel) Authenticate(email, password string) (*Login, error) {
+	// Retrieve the user from the database by email
+	query := `SELECT id, email, password_hash, created_at, role FROM users WHERE email = $1`
+	row := m.DB.QueryRow(query, email)
+
+	var login Login
+	err := row.Scan(&login.ID, &login.Email, &login.Password, &login.CreatedAt, &login.Role)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil // No user found with the given email
+		}
+		return nil, err // Some other error occurred
+	}
+
+	// check if the password
+	err = bcrypt.CompareHashAndPassword([]byte(login.Password), []byte(password))
+	if err != nil {
+		if err == bcrypt.ErrMismatchedHashAndPassword {
+			return nil, fmt.Errorf("invalid password")
 		}
 		return nil, err // Some other error occurred
 	}

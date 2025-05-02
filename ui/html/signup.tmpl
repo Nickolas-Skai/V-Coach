@@ -59,18 +59,39 @@
     </style>
 <div class="form-container">
   <h2>Sign Up for V-Coach</h2>
-  <form method="POST" action="/User/signup">
-    <label>Name:</label>
-    <input type="text" name="name" required>
-    <label>Email:</label>
-    <input type="email" name="email" required>
-    <label>Age:</label>
-    <input type="number" name="age" min="18" required>
-    <label>School:</label>
-    <input type="text" name="school" required>
-    <label>Password:</label>
-    <input type="password" name="password" required>
-    <button type="submit">Sign Up</button>
-  </form>
+ <form method="POST" action="/user/signup">
+  <label for="name">Name:</label>
+  <input type="text" id="name" name="name" required>
+
+  <label for="email">Email:</label>
+  <input type="email" id="email" name="email" required>
+
+<label for ="age">Age:</label>
+  <input type="number" id="age" name="age" required>
+
+  <label for="password">Password:</label>
+  <input type="password" id="password" name="password" required>
+    <label for="confirm_password">Confirm Password:</label>
+    <input type="password" id="confirm_password" name="confirm_password" required>
+
+  <label for="school">School:</label>
+  <select id="school" name="school_id" required>
+    {{ range .Schools }}
+      <option value="{{ .ID }}">{{ .Name }}</option>
+    {{ end }}
+  </select>
+    <label for="role">Role:</label>
+    <select id="role" name="role" required>
+        <option value="teacher">Teacher</option>
+        <option value="coach">Coach</option>
+    </select>
+
+  <button type="submit">Sign Up</button>
+</form>
+    <p>Already have an account? <a href="/login">Login here</a></p>
+    {{ if .FormErrors }}
+        <p style="color: red;">{{ .FormErrors }}</p>
+    {{ end }}
+
 </div>
 {{ end }}

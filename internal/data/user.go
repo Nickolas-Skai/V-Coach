@@ -10,9 +10,9 @@ type User struct {
 	ID       int
 	Name     string
 	Email    string
-	Password string
+	Password []byte
 	Age      int
-	School   string
+	School   sql.NullInt64
 	Role     string // "teacher" or "coach"
 }
 

@@ -10,10 +10,10 @@ func (app *application) routes() http.Handler {
 	mux.Handle("/static/", http.StripPrefix("/static", fileServer))
 	mux.HandleFunc("GET /{$}", app.homepage)
 	mux.HandleFunc("/login", app.LoginPageHandler)
-	mux.HandleFunc("/signup", app.SignUpPageHandler)
-	mux.HandleFunc("/User/signup", app.AddUserHandler)
+	mux.HandleFunc("GET /signup", app.SignUpPageHandler)
+	mux.HandleFunc("/user/signup", app.SignUpHandler)
 	mux.HandleFunc("/coach_dashboard", app.CoachDashBoardHandler)
 	mux.HandleFunc("/interview", app.InterviewHandler)
-	mux.HandleFunc("/validate/login", app.ValidateLoginHandler)
+	mux.HandleFunc("/loginuser", app.LoginHandler)
 	return app.loggingMiddleware(mux)
 }
