@@ -66,3 +66,26 @@ func (m *SessionManager) RenewToken(r *http.Request, w http.ResponseWriter) erro
 	}
 	return nil
 }
+
+// exists check if the session exists
+func (m *SessionManager) Exists(r *http.Request, key string) bool {
+	session, err := m.Store.Get(r, "session")
+	if err != nil {
+		return false
+	}
+	_, ok := session.Values[key]
+	return ok
+}
+
+// get string from session
+func (m *SessionManager) GetString(r *http.Request, key string) string {
+	session, err := m.Store.Get(r, "session")
+	if err != nil {
+		return ""
+	}
+	value, ok := session.Values[key].(string)
+	if !ok {
+		return ""
+	}
+	return value
+}

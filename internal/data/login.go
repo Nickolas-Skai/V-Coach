@@ -239,3 +239,27 @@ func (m *LoginModel) Authenticate(email, password string) (*Login, error) {
 	}
 	return &login, nil
 }
+
+// /get user by role
+func (m *LoginModel) GetUserRole(role string) ([]*Login, error) {
+	// Retrieve the user's role from the database
+	query := `SELECT id, email, password_hash, created_at, role FROM users WHERE role = $1`
+	rows, err := m.DB.Query(query, role)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var logins []*Login
+	for rows.Next() {
+		var login Login
+		err := rows.Scan(&login.ID, &login.Email, &login.Password, &login.CreatedAt, &login.Role)
+		if err != nil {
+			return nil, err
+		}
+		logins = append(logins, &login)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return logins, nil
+}

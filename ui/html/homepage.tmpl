@@ -6,8 +6,13 @@
     
     <p>{{.PageDescription}}</p>
     <div class="buttons">
-        <button onclick="location.href='/login'">Login</button>
-        <button onclick="location.href='/signup'">Sign Up</button>
+    
+        {{ if .IsAuthenticated }}
+            <button onclick="location.href='/logout'">Logout</button>
+        {{ else }}
+            <button onclick="location.href='/login'">Login</button>
+            <button onclick="location.href='/signup'">Sign Up</button>
+        {{ end }}
     </div>
 </div>
 {{ end }}

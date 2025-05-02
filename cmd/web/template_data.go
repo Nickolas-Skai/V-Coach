@@ -40,7 +40,7 @@ type TemplateData struct {
 	QuestionsJSON         template.JS          // Add this field for JSON representation of questions
 	InterviewResponse     *data.InterviewResponseModel
 	InterviewResponseJSON *data.InterviewResponseModel
-	IsLoggedIn            bool
+	IsAuthenticated       bool
 	NextURL               string
 	ShowNextButton        bool
 	PreviousURL           string
@@ -49,7 +49,7 @@ type TemplateData struct {
 		ID   int
 		Name string
 	}
-	UserRole              string
+	UserRole string
 }
 
 func NewTemplateData() *TemplateData {

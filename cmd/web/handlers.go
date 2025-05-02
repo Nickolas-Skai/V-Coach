@@ -23,7 +23,7 @@ func (app *application) clientError(w http.ResponseWriter, status int) {
 
 // to get to pages
 func (app *application) homepage(w http.ResponseWriter, r *http.Request) {
-	isLoggedIn := app.sessionManager.Exists(r, "user_id")
+	IsAuthenticated := app.sessionManager.Exists(r, "user_id")
 	userRole := app.sessionManager.GetString(r, "user_role")
 
 	data := &TemplateData{
@@ -32,7 +32,7 @@ func (app *application) homepage(w http.ResponseWriter, r *http.Request) {
 		PageDescription: "Your virtual coaching assistant.",
 		NavLogo:         "static/images/logo.svg",
 		Greeting:        "",
-		IsLoggedIn:      isLoggedIn,
+		IsAuthenticated: IsAuthenticated,
 		UserRole:        userRole,
 	}
 	err := app.render(w, http.StatusOK, "homepage.tmpl", data)
@@ -88,25 +88,37 @@ func (app *application) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		app.serverError(w, err)
 		return
 	}
-	// Set the session data
+	//if user is authenticated, set the session
 	app.sessionManager.Put(r, w, "user_id", userID)
-	// Set the session data
-	app.sessionManager.Put(r, w, "user_id", login.ID)
-	app.sessionManager.Put(r, w, "user_role", login.Role)
-	app.sessionManager.Put(r, w, "flash", "Login successful")
-	// Redirect to the dashboard or homepage
-	if login.Role == "coach" {
-		http.Redirect(w, r, "/coach/dashboard", http.StatusSeeOther)
-	} else if login.Role == "teacher" {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-	} else {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-	}
-	// Render the login page
-	err = app.render(w, http.StatusOK, "login.tmpl", nil)
-	if err != nil {
-		app.logger.Error("failed to render template", "template", "login.tmpl", "url", r.URL, "method", r.Method, "error", err)
-		app.serverError(w, err)
+	// Fetch the user role from session if exists
+	userRole := app.sessionManager.GetString(r, "user_role")
+	// Fetch the user role from session
+	if userRole == "" {
+		// Get the user role from the database
+		user, err := app.loginModel.GetUserByID(userID.ID)
+		if err != nil {
+			app.serverError(w, err)
+			return
+		}
+		if user == nil {
+			app.clientError(w, http.StatusUnauthorized)
+			return
+		}
+		userRole = user.Role
+		// Store the user role in the session
+		app.sessionManager.Put(r, w, "user_role", userRole)
+		// Redirect to the appropriate dashboard based on the user role
+		if userRole == "coach" {
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+		} else if userRole == "teacher" {
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+		}
+
+		err = app.render(w, http.StatusOK, "login.tmpl", nil)
+		if err != nil {
+			app.logger.Error("failed to render template", "template", "login.tmpl", "url", r.URL, "method", r.Method, "error", err)
+			app.serverError(w, err)
+		}
 	}
 }
 func (app *application) SignUpPageHandler(w http.ResponseWriter, r *http.Request) {

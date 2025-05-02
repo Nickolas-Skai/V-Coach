@@ -53,7 +53,7 @@
             <a href="/interview">Start A Session</a>
             <a href="/contact">Contact</a>
             <a href="/about">About</a>
-            {{ if .IsLoggedIn }}
+            {{ if .IsAuthenticated  }}
                 <a href="/logout">Logout</a>
                 {{ if eq .UserRole "coach" }}
                     <a href="/coach/dashboard">Dashboard</a>
