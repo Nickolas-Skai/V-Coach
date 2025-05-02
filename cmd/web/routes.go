@@ -12,8 +12,8 @@ func (app *application) routes() http.Handler {
 	mux.HandleFunc("/login", app.LoginPageHandler)
 	mux.HandleFunc("GET /signup", app.SignUpPageHandler)
 	mux.HandleFunc("/user/signup", app.SignUpHandler)
-	mux.HandleFunc("/coach_dashboard", app.CoachDashBoardHandler)
-	mux.HandleFunc("/interview", app.InterviewHandler)
+	mux.Handle("/coach_dashboard", app.requireAuthentication(http.HandlerFunc(app.CoachDashBoardHandler)))
+	mux.Handle("/interview", app.requireAuthentication(http.HandlerFunc(app.InterviewHandler)))
 	mux.HandleFunc("/loginuser", app.LoginHandler)
 	return app.loggingMiddleware(mux)
 }

@@ -23,6 +23,8 @@ func (app *application) clientError(w http.ResponseWriter, status int) {
 
 // to get to pages
 func (app *application) homepage(w http.ResponseWriter, r *http.Request) {
+	isLoggedIn := app.sessionManager.Exists(r, "user_id")
+	userRole := app.sessionManager.GetString(r, "user_role")
 
 	data := &TemplateData{
 		Title:           "Home",
@@ -30,6 +32,8 @@ func (app *application) homepage(w http.ResponseWriter, r *http.Request) {
 		PageDescription: "Your virtual coaching assistant.",
 		NavLogo:         "static/images/logo.svg",
 		Greeting:        "",
+		IsLoggedIn:      isLoggedIn,
+		UserRole:        userRole,
 	}
 	err := app.render(w, http.StatusOK, "homepage.tmpl", data)
 	if err != nil {
@@ -238,6 +242,11 @@ func (app *application) SignUpHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 func (app *application) LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	if !app.sessionManager.Exists(r, "user_id") {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
 	// Clear the session
 	session, err := app.sessionManager.Store.Get(r, "session")
 	if err != nil {
@@ -254,12 +263,16 @@ func (app *application) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 func (app *application) CoachDashBoardHandler(w http.ResponseWriter, r *http.Request) {
+	if !app.sessionManager.Exists(r, "user_id") {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
 	data := &TemplateData{
 		Title:           "Coach Dashboard",
 		HeaderText:      "Welcome to Your Dashboard",
 		PageDescription: "Your virtual coaching assistant.",
-
-		NavLogo: "ui/static/images/logo.svg",
+		NavLogo:         "ui/static/images/logo.svg",
 	}
 	err := app.render(w, http.StatusOK, "coach_dashboard.tmpl", data)
 	if err != nil {
@@ -271,6 +284,11 @@ func (app *application) CoachDashBoardHandler(w http.ResponseWriter, r *http.Req
 // handlers.go (InterviewHandler with embedded questions and logic)
 // InterviewHandler with dynamic question serving
 func (app *application) InterviewHandler(w http.ResponseWriter, r *http.Request) {
+	if !app.sessionManager.Exists(r, "user_id") {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
 	questions, err := app.questionModel.GetActiveQuestions()
 	if err != nil {
 		app.logger.Error("Failed to fetch interview questions", "error", err)
@@ -325,5 +343,9 @@ func (app *application) InterviewHandler(w http.ResponseWriter, r *http.Request)
 }
 
 func (app *application) SubmitResponseHandler(w http.ResponseWriter, r *http.Request) {
+	if !app.sessionManager.Exists(r, "user_id") {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
 
 }
