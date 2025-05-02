@@ -18,5 +18,25 @@ func (app *application) loggingMiddleware(next http.Handler) http.Handler {
 		app.logger.Info("Request processed")
 	})
 	return fn
+}
 
+func (app *application) requireAuthentication(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !app.sessionManager.Exists(r, "user_id") {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (app *application) requireRole(role string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		userRole := app.sessionManager.GetString(r, "user_role")
+		if userRole != role {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }

@@ -49,6 +49,7 @@ type TemplateData struct {
 		ID   int
 		Name string
 	}
+	UserRole              string
 }
 
 func NewTemplateData() *TemplateData {
