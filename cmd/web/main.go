@@ -34,6 +34,7 @@ type HomePageData struct {
 }
 
 func main() {
+
 	err := godotenv.Load(".envrc")
 	if err != nil {
 		log.Fatalf("Error loading .envrc file")
@@ -41,6 +42,10 @@ func main() {
 
 	addr := flag.String("addr", os.Getenv("ADDRESS"), "HTTP network address")
 	dsn := flag.String("dsn", os.Getenv("VCOACH_DB_DSN"), "PostgreSQL DSN")
+	sessionSecret := os.Getenv("SESSION_SECRET")
+	if sessionSecret == "" {
+		log.Fatal("SESSION_SECRET is not set in the environment")
+	}
 
 	flag.Parse()
 

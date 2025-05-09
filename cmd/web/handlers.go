@@ -5,10 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html/template"
 	"net/http"
+	"strings"
 
 	//"github.com/cohune-cabbage/di/internal/validator"
 	"strconv"
+
+	"github.com/gorilla/csrf"
 
 	"github.com/cohune-cabbage/di/internal/data"
 	"golang.org/x/crypto/bcrypt"
@@ -23,18 +27,14 @@ func (app *application) clientError(w http.ResponseWriter, status int) {
 
 // to get to pages
 func (app *application) homepage(w http.ResponseWriter, r *http.Request) {
-	IsAuthenticated := app.sessionManager.Exists(r, "user_id")
-	userRole := app.sessionManager.GetString(r, "user_role")
 
-	data := &TemplateData{
-		Title:           "Home",
+	data := app.addDefaultData(&TemplateData{
+		Title:           "V-Coach",
 		HeaderText:      "Welcome to V-Coach",
 		PageDescription: "Your virtual coaching assistant.",
 		NavLogo:         "static/images/logo.svg",
-		Greeting:        "",
-		IsAuthenticated: IsAuthenticated,
-		UserRole:        userRole,
-	}
+	}, w, r)
+	app.logger.Info("IsAuthenicated", "IsAuthenticated", app.sessionManager.Exists(r, "IsAuthenticated"))
 	err := app.render(w, http.StatusOK, "homepage.tmpl", data)
 	if err != nil {
 		app.logger.Error("failed to render template", "template", "homepage.tmpl", "url", r.URL, "method", r.Method, "error", err)
@@ -44,81 +44,116 @@ func (app *application) homepage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) LoginPageHandler(w http.ResponseWriter, r *http.Request) {
+	// Check if the user is already logged in
+	if app.sessionManager.Exists(r, "user_id") {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	// Prepare template data
 	data := &TemplateData{
 		Title:           "Login",
 		HeaderText:      "Login to V-Coach",
 		PageDescription: "Your virtual coaching assistant.",
 		NavLogo:         "static/images/logo.svg",
+		CSRFToken:       template.JS(csrf.Token(r)),
 	}
+
+	// Render the login page
 	err := app.render(w, http.StatusOK, "login.tmpl", data)
 	if err != nil {
-		app.logger.Error("failed to render template", "template", "login.tmpl", "url", r.URL, "method", r.Method, "error", err)
-		app.serverError(w, err)
+		app.logger.Error("failed to render login page", "template", "login.tmpl", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
 	}
 }
+
 func (app *application) LoginHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse the form data
 	err := r.ParseForm()
 	if err != nil {
+		app.logger.Error("Failed to parse login form", "error", err)
 		app.clientError(w, http.StatusBadRequest)
 		return
 	}
-	email := r.Form.Get("email")
+
+	email := strings.TrimSpace(r.Form.Get("email"))
 	password := r.Form.Get("password")
+
+	// Validate the email and password
 	if email == "" || password == "" {
+		app.logger.Warn("Missing email or password")
 		app.clientError(w, http.StatusBadRequest)
 		return
 	}
-	login := &data.Login{
-		Email:    email,
-		Password: password,
-	}
-	// Validate the login credentials
-	err = app.loginModel.ValidateLogin(login)
-	if err != nil {
-		app.clientError(w, http.StatusBadRequest)
-		return
-	}
-	// Check if the user exists in the database
+
+	// Authenticate the user
 	userID, err := app.loginModel.Authenticate(email, password)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			app.logger.Warn("Invalid login attempt", "email", email)
 			app.clientError(w, http.StatusUnauthorized)
 			return
 		}
+		app.logger.Error("Error during authentication", "error", err)
 		app.serverError(w, err)
 		return
 	}
-	//if user is authenticated, set the session
-	app.sessionManager.Put(r, w, "user_id", userID)
-	// Fetch the user role from session if exists
-	userRole := app.sessionManager.GetString(r, "user_role")
-	// Fetch the user role from session
-	if userRole == "" {
-		// Get the user role from the database
-		user, err := app.loginModel.GetUserByID(userID.ID)
-		if err != nil {
-			app.serverError(w, err)
-			return
-		}
-		if user == nil {
-			app.clientError(w, http.StatusUnauthorized)
-			return
-		}
-		userRole = user.Role
-		// Store the user role in the session
-		app.sessionManager.Put(r, w, "user_role", userRole)
-		// Redirect to the appropriate dashboard based on the user role
-		if userRole == "coach" {
-			http.Redirect(w, r, "/", http.StatusSeeOther)
-		} else if userRole == "teacher" {
-			http.Redirect(w, r, "/", http.StatusSeeOther)
-		}
 
-		err = app.render(w, http.StatusOK, "login.tmpl", nil)
-		if err != nil {
-			app.logger.Error("failed to render template", "template", "login.tmpl", "url", r.URL, "method", r.Method, "error", err)
-			app.serverError(w, err)
-		}
+	// Fetch the user details
+	user, err := app.loginModel.GetUserByID(userID.ID)
+	if err != nil {
+		app.logger.Error("Failed to fetch user details", "error", err)
+		app.serverError(w, err)
+		return
+	}
+	if user == nil {
+		app.logger.Warn("User not found", "user_id", userID.ID)
+		app.clientError(w, http.StatusUnauthorized)
+		return
+	}
+
+	// Store user ID and role in the session
+
+	err = app.sessionManager.Put(r, w, "user_id", user.ID)
+	if err != nil {
+		app.logger.Error("Failed to store user ID in session", "error", err)
+		app.serverError(w, err)
+		return
+	}
+	err = app.sessionManager.Put(r, w, "user_role", user.Role)
+	if err != nil {
+		app.logger.Error("Failed to store user role in session", "error", err)
+		app.serverError(w, err)
+		return
+	}
+
+	// Set the session expiration time
+	session, err := app.sessionManager.Store.Get(r, "session")
+	if err != nil {
+		app.logger.Error("Failed to get session", "error", err)
+		app.serverError(w, err)
+		return
+	}
+	session.Options.MaxAge = 3600 // Set session expiration to 1 hour
+	err = session.Save(r, w)
+	if err != nil {
+		app.logger.Error("Failed to save session", "error", err)
+		app.serverError(w, err)
+		return
+	}
+	// Redirect to the appropriate dashboard based on the user role
+	if user.Role == "coach" {
+		http.Redirect(w, r, "/coach_dashboard", http.StatusSeeOther)
+	} else if user.Role == "student" {
+		http.Redirect(w, r, "/homepage", http.StatusSeeOther)
+	} else {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 	}
 }
 func (app *application) SignUpPageHandler(w http.ResponseWriter, r *http.Request) {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"html/template"
+	"net/http"
 
 	"github.com/cohune-cabbage/di/internal/data"
 )
@@ -49,7 +50,10 @@ type TemplateData struct {
 		ID   int
 		Name string
 	}
-	UserRole string
+	UserRole        string
+	CurrentUserID   int
+	CurrentUserRole string
+	CSRFToken       template.JS
 }
 
 func NewTemplateData() *TemplateData {
@@ -77,4 +81,21 @@ type Question struct {
 	Options               []string // Only for checkbox/radio/scale
 	AllowConfidenceRating bool
 	Required              bool
+}
+
+func (app *application) addDefaultData(td *TemplateData, _ http.ResponseWriter, r *http.Request) *TemplateData {
+	if td == nil {
+		td = &TemplateData{}
+	}
+
+	// Check if the user is authenticated
+	td.IsAuthenticated = app.sessionManager.Exists(r, "IsAuthenticated")
+
+	// Add user role and ID if authenticated
+	if td.IsAuthenticated {
+		td.CurrentUserID = app.sessionManager.GetInt(r, "user_id")
+		td.UserRole = app.sessionManager.GetString(r, "user_role")
+	}
+
+	return td
 }

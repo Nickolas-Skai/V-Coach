@@ -3,6 +3,7 @@
 package data
 
 import (
+	"crypto/sha256"
 	"database/sql"
 
 	"net/http"
@@ -20,21 +21,22 @@ type SessionManager struct {
 	Validator *validator.Validator
 }
 
-// NewSessionManager creates a new SessionManager.
 func NewSessionManager(db *sql.DB, secretKey string) *SessionManager {
-	store := sessions.NewCookieStore([]byte(secretKey))
-	store.Options = &sessions.Options{}
+	// Hash the secret key using SHA-256
+	hashedKey := sha256.Sum256([]byte(secretKey))
 
-	// Set the session expiration time to 1 hour
+	store := sessions.NewCookieStore(hashedKey[:])
+	store.Options = &sessions.Options{
+		MaxAge:   3600, // 1 hour
+		HttpOnly: true,
+		Secure:   true, // Set to true in production
+		SameSite: http.SameSiteStrictMode,
+	}
 
-	store.Options.MaxAge = 3600
-	store.Options.HttpOnly = true
-	store.Options.Secure = true
-	store.Options.SameSite = http.SameSiteStrictMode
 	return &SessionManager{
 		DB:        db,
 		Store:     store,
-		CSRFKey:   []byte(secretKey),
+		CSRFKey:   hashedKey[:],
 		Validator: validator.NewValidator(),
 	}
 }
@@ -59,7 +61,7 @@ func (m *SessionManager) RenewToken(r *http.Request, w http.ResponseWriter) erro
 	if err != nil {
 		return err
 	}
-	session.Values["csrf_token"] = m.CSRFToken
+	session.Values[""] = m.CSRFToken
 	err = session.Save(r, w)
 	if err != nil {
 		return err
@@ -86,6 +88,32 @@ func (m *SessionManager) GetString(r *http.Request, key string) string {
 	value, ok := session.Values[key].(string)
 	if !ok {
 		return ""
+	}
+	return value
+}
+
+// get int from session
+func (m *SessionManager) GetInt(r *http.Request, key string) int {
+	session, err := m.Store.Get(r, "session")
+	if err != nil {
+		return 0
+	}
+	value, ok := session.Values[key].(int)
+	if !ok {
+		return 0
+	}
+	return value
+}
+
+// get string from session
+func (m *SessionManager) Get(r *http.Request, key string) interface{} {
+	session, err := m.Store.Get(r, "session")
+	if err != nil {
+		return nil
+	}
+	value, ok := session.Values[key]
+	if !ok {
+		return nil
 	}
 	return value
 }

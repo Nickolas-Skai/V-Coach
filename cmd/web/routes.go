@@ -4,6 +4,8 @@ import (
 	"net/http"
 )
 
+// routes sets up the application routes and handlers.
+
 func (app *application) routes() http.Handler {
 	mux := http.NewServeMux()
 	fileServer := http.FileServer(http.Dir("./ui/static/"))
