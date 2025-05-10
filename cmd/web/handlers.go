@@ -396,3 +396,23 @@ func (app *application) SubmitResponseHandler(w http.ResponseWriter, r *http.Req
 	}
 
 }
+
+// function coach dashboard handler
+func (app *application) CoachDashboardHandler(w http.ResponseWriter, r *http.Request) {
+	if !app.sessionManager.Exists(r, "user_id") {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	data := &TemplateData{
+		Title:           "Coach Dashboard",
+		HeaderText:      "Welcome to Your Dashboard",
+		PageDescription: "Your virtual coaching assistant.",
+		NavLogo:         "ui/static/images/logo.svg",
+	}
+	err := app.render(w, http.StatusOK, "coach_dashboard.tmpl", data)
+	if err != nil {
+		app.logger.Error("failed to render template", "template", "Coach_dashboard.tmpl", "url", r.URL, "method", r.Method, "error", err)
+		app.serverError(w, err)
+	}
+}
