@@ -10,7 +10,25 @@
 <div class="interview-container">
   <div class="chat-header">🎤 V-Coach Interview</div>
 
-<form id="interview-form" method="POST" action="/next/question?q={{ if .CurrentQuestion }}{{ .CurrentQuestion.ID }}{{ else }}0{{ end }}"> 
+    <form id="interview-form" method="POST" action="/next/question?={{ .CurrentQuestion.ID }}">
+    <input type="hidden" name="interview_id" value="{{ .InterviewID }}">
+    <input type="hidden" name="current_question" value="{{ .CurrentQuestion }}">
+
+    {{ if .Error }}
+      <div class="error-message">{{ .Error }}</div>
+    {{ end }}
+
+    <div class="question-info">
+      <p>Question {{ .NextQuestion }} of {{ len .Questions }}</p>
+    </div>
+
+    <div class="question-instructions">
+      <p>Instructions: {{ .Instructions }}</p>
+    </div>
+
+    <div class="question-text">
+      <p>{{ .Questions .CurrentQuestion }}</p>
+    </div>
    {{ range .Questions }}
       <div class="question-block" data-question="{{ .Text }}">
         <p class="question-text">{{ .Text }}</p>

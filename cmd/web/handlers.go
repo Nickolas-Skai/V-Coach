@@ -431,82 +431,9 @@ func (app *application) CoachDashboardHandler(w http.ResponseWriter, r *http.Req
 		app.serverError(w, err)
 	}
 }
+//Next question handler
 
-func (app *application) NextQuestionHandler(w http.ResponseWriter, r *http.Request) {
-	app.logger.Info("Received request for NextQuestionHandler", "method", r.Method, "url", r.URL.String())
 
-	sessionID := app.sessionManager.GetInt(r, "session_id")
-	if sessionID == 0 {
-		app.logger.Warn("Missing session_id in session")
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
-	app.logger.Info("Session ID", "session_id", sessionID)
-
-	if err := r.ParseForm(); err != nil {
-		app.logger.Error("Failed to parse form", "error", err)
-		http.Error(w, "Failed to process form", http.StatusBadRequest)
-		return
-	}
-	app.logger.Info("Form data received", "form", r.Form)
-
-	qIndex := 0
-	if qStr := r.URL.Query().Get("q"); qStr != "" {
-		if parsed, err := strconv.Atoi(qStr); err == nil && parsed >= 0 {
-			qIndex = parsed
-		} else {
-			app.logger.Error("Invalid question index", "error", err)
-			http.Error(w, "Invalid question index", http.StatusBadRequest)
-			return
-		}
-	}
-	app.logger.Info("Current question index", "qIndex", qIndex)
-
-	questions, err := app.questionModel.GetActiveQuestions()
-	if err != nil {
-		app.logger.Error("Failed to fetch questions", "error", err)
-		http.Error(w, "Failed to load questions", http.StatusInternalServerError)
-		return
-	}
-	if len(questions) == 0 {
-		app.logger.Warn("No questions available")
-		http.Error(w, "No questions available", http.StatusNotFound)
-		return
-	}
-	app.logger.Info("Total questions available", "totalQuestions", len(questions))
-
-	if qIndex >= len(questions) {
-		http.Redirect(w, r, "/interview/complete", http.StatusSeeOther)
-		return
-	}
-
-	nextQ := questions[qIndex]
-	data := &TemplateData{
-		Title: fmt.Sprintf("Interview Question %d", qIndex+1),
-		CurrentQuestion: &Question{
-			ID:       nextQ.ID,
-			Text:     nextQ.Text,
-			Type:     nextQ.Type,
-			Required: nextQ.Required,
-			Options: func() []string {
-				var options []string
-				b, _ := json.Marshal(nextQ.Options)
-				json.Unmarshal(b, &options)
-				return options
-			}(),
-		},
-		CurrentIndex:   qIndex,
-		TotalQuestions: len(questions),
-	}
-
-	app.logger.Info("Rendering template with data", "data", data)
-
-	err = app.render(w, http.StatusOK, "interview.tmpl", data)
-	if err != nil {
-		app.logger.Error("Failed to render template", "template", "interview.tmpl", "error", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-	}
-}
 func (app *application) PreviousQuestionHandler(w http.ResponseWriter, r *http.Request) {
 	// Get the current question index from the query parameter
 	qIndexStr := r.URL.Query().Get("q")
