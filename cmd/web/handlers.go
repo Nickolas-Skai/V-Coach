@@ -8,7 +8,6 @@ import (
 	"html/template"
 	"net/http"
 	"strings"
-	"time"
 
 	//"github.com/cohune-cabbage/di/internal/validator"
 	"strconv"
@@ -481,54 +480,9 @@ func (app *application) NextQuestionHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	currentQ := questions[qIndex]
-	answer := r.FormValue("answer")
-	isAnswered := false
-
-	switch currentQ.Type {
-	case "text", "longtext", "radio", "dropdown":
-		isAnswered = answer != ""
-	case "checkbox":
-		selected := r.Form["answer"]
-		isAnswered = len(selected) > 0
-		answer = strings.Join(selected, ", ")
-	case "file":
-		file, _, err := r.FormFile("answer")
-		isAnswered = err == nil && file != nil
-	default:
-		isAnswered = answer != ""
-	}
-
-	if !isAnswered {
-		app.logger.Warn("No answer submitted", "question_id", currentQ.ID)
-		http.Error(w, "Please answer before continuing", http.StatusBadRequest)
-		return
-	}
-
-	err = app.InterviewResponseModel.SaveAnswer(&data.InterviewResponse{
-		QuestionID:  currentQ.ID,
-		Answer:      answer,
-		SubmittedAt: time.Now().Format(time.RFC3339),
-		SessionID:   sessionID,
-	})
-	if err != nil {
-		app.logger.Error("Failed to save interview response", "error", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-	app.logger.Info("Saved answer", "question_id", currentQ.ID, "answer", answer)
-
-	nextIndex := qIndex + 1
-	app.logger.Info("Next question index", "nextIndex", nextIndex)
-
-	if nextIndex >= len(questions) {
-		http.Redirect(w, r, "/interview/complete", http.StatusSeeOther)
-		return
-	}
-
-	nextQ := questions[nextIndex]
+	nextQ := questions[qIndex]
 	data := &TemplateData{
-		Title: fmt.Sprintf("Interview Question %d", nextIndex+1),
+		Title: fmt.Sprintf("Interview Question %d", qIndex+1),
 		CurrentQuestion: &Question{
 			ID:       nextQ.ID,
 			Text:     nextQ.Text,
@@ -541,7 +495,7 @@ func (app *application) NextQuestionHandler(w http.ResponseWriter, r *http.Reque
 				return options
 			}(),
 		},
-		CurrentIndex:   nextIndex,
+		CurrentIndex:   qIndex,
 		TotalQuestions: len(questions),
 	}
 
@@ -549,7 +503,7 @@ func (app *application) NextQuestionHandler(w http.ResponseWriter, r *http.Reque
 
 	err = app.render(w, http.StatusOK, "interview.tmpl", data)
 	if err != nil {
-		app.logger.Error("Failed to render template", "error", err)
+		app.logger.Error("Failed to render template", "template", "interview.tmpl", "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 }

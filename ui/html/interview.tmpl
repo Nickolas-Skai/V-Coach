@@ -10,8 +10,8 @@
 <div class="interview-container">
   <div class="chat-header">🎤 V-Coach Interview</div>
 
-  <form id="interview-form" method="POST" action="/next/question">
-    {{ range .Questions }}
+<form id="interview-form" method="POST" action="/next/question?q={{ if .CurrentQuestion }}{{ .CurrentQuestion.ID }}{{ else }}0{{ end }}"> 
+   {{ range .Questions }}
       <div class="question-block" data-question="{{ .Text }}">
         <p class="question-text">{{ .Text }}</p>
 
