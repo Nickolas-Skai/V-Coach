@@ -52,6 +52,8 @@ type InterviewResponse struct {
 	QuestionDataRequired  bool
 	QuestionDataModel     *QuestionModel
 	QuestionDataDB        *QuestionModel
+	TotalQuestions        int
+	CurrentIndex          int
 }
 
 type InterviewResponseModel struct {
@@ -268,4 +270,59 @@ func (m *QuestionModel) GetActiveQuestions() ([]*QuestionModel, error) {
 	}
 
 	return questions, nil
+}
+
+// save answer function
+func (m *InterviewResponseModel) SaveAnswer(interviewResponse *InterviewResponse) error {
+	// Validate the interview response
+	err := m.ValidateInterviewResponse(interviewResponse)
+	if err != nil {
+		return err
+	}
+
+	// Insert the interview response into the database
+	query := `
+        INSERT INTO responses (session_id, question_id, response_text, submitted_at)
+        VALUES ($1, $2, $3, $4)
+    `
+	_, err = m.DB.Exec(query, interviewResponse.SessionID, interviewResponse.QuestionID, interviewResponse.Answer, interviewResponse.SubmittedAt)
+	return err
+}
+
+func (m *InterviewResponseModel) GetInterviewResponsesBySessionID(sessionID int) ([]*InterviewResponse, error) {
+	// Query to get interview responses by session ID
+	query := `SELECT id, question_id, response_text, audio_url, confidence, submitted_at FROM interview_responses WHERE session_id = ?`
+	rows, err := m.DB.Query(query, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var responses []*InterviewResponse
+	for rows.Next() {
+		var response InterviewResponse
+		err := rows.Scan(&response.ID, &response.QuestionID, &response.Answer, &response.AudioURL, &response.ConfidenceRating, &response.SubmittedAt)
+		if err != nil {
+			return nil, err
+		}
+		responses = append(responses, &response)
+	}
+
+	return responses, nil
+}
+
+// create a session number for the interview
+// set the session number
+// set the Teacher ID
+// when it started and ended
+func (m *InterviewResponseModel) CreateInterviewSession() (int, error) {
+	// Insert a new interview session into the database
+	query := `INSERT INTO sessions (teacher_id, started_at, ended_at) VALUES ($1,$2,$3) RETURNING id`
+	var sessionID int
+	err := m.DB.QueryRow(query, 1, "2023-10-01", "2023-10-02").Scan(&sessionID)
+	if err != nil {
+		return 0, err
+	}
+
+	return sessionID, nil
 }

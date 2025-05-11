@@ -46,6 +46,8 @@ type TemplateData struct {
 	ShowNextButton        bool
 	PreviousURL           string
 	SuccessMessage        string
+	TotalQuestions        int
+	CurrentIndex          int
 	Schools               []struct {
 		ID   int
 		Name string

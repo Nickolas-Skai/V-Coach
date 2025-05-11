@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"net/http"
 	"strings"
+	"time"
 
 	//"github.com/cohune-cabbage/di/internal/validator"
 	"strconv"
@@ -335,6 +336,21 @@ func (app *application) InterviewHandler(w http.ResponseWriter, r *http.Request)
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
+	// get interview session id
+	// If not, create a new interv
+	//set the interview session id
+	sessionID := app.sessionManager.GetInt(r, "session_id")
+	if sessionID == 0 {
+		sessionID, err := app.InterviewResponseModel.CreateInterviewSession()
+		if err != nil {
+			app.logger.Error("Failed to create interview session", "error", err)
+			app.serverError(w, err)
+			return
+		}
+		app.sessionManager.Put(r, w, "session_id", sessionID)
+		app.logger.Info("Created new interview session", "session_id", sessionID)
+
+	}
 
 	questions, err := app.questionModel.GetActiveQuestions()
 	if err != nil {
@@ -414,5 +430,178 @@ func (app *application) CoachDashboardHandler(w http.ResponseWriter, r *http.Req
 	if err != nil {
 		app.logger.Error("failed to render template", "template", "Coach_dashboard.tmpl", "url", r.URL, "method", r.Method, "error", err)
 		app.serverError(w, err)
+	}
+}
+
+func (app *application) NextQuestionHandler(w http.ResponseWriter, r *http.Request) {
+	app.logger.Info("Received request for NextQuestionHandler", "method", r.Method, "url", r.URL.String())
+
+	sessionID := app.sessionManager.GetInt(r, "session_id")
+	if sessionID == 0 {
+		app.logger.Warn("Missing session_id in session")
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	app.logger.Info("Session ID", "session_id", sessionID)
+
+	if err := r.ParseForm(); err != nil {
+		app.logger.Error("Failed to parse form", "error", err)
+		http.Error(w, "Failed to process form", http.StatusBadRequest)
+		return
+	}
+	app.logger.Info("Form data received", "form", r.Form)
+
+	qIndex := 0
+	if qStr := r.URL.Query().Get("q"); qStr != "" {
+		if parsed, err := strconv.Atoi(qStr); err == nil && parsed >= 0 {
+			qIndex = parsed
+		} else {
+			app.logger.Error("Invalid question index", "error", err)
+			http.Error(w, "Invalid question index", http.StatusBadRequest)
+			return
+		}
+	}
+	app.logger.Info("Current question index", "qIndex", qIndex)
+
+	questions, err := app.questionModel.GetActiveQuestions()
+	if err != nil {
+		app.logger.Error("Failed to fetch questions", "error", err)
+		http.Error(w, "Failed to load questions", http.StatusInternalServerError)
+		return
+	}
+	if len(questions) == 0 {
+		app.logger.Warn("No questions available")
+		http.Error(w, "No questions available", http.StatusNotFound)
+		return
+	}
+	app.logger.Info("Total questions available", "totalQuestions", len(questions))
+
+	if qIndex >= len(questions) {
+		http.Redirect(w, r, "/interview/complete", http.StatusSeeOther)
+		return
+	}
+
+	currentQ := questions[qIndex]
+	answer := r.FormValue("answer")
+	isAnswered := false
+
+	switch currentQ.Type {
+	case "text", "longtext", "radio", "dropdown":
+		isAnswered = answer != ""
+	case "checkbox":
+		selected := r.Form["answer"]
+		isAnswered = len(selected) > 0
+		answer = strings.Join(selected, ", ")
+	case "file":
+		file, _, err := r.FormFile("answer")
+		isAnswered = err == nil && file != nil
+	default:
+		isAnswered = answer != ""
+	}
+
+	if !isAnswered {
+		app.logger.Warn("No answer submitted", "question_id", currentQ.ID)
+		http.Error(w, "Please answer before continuing", http.StatusBadRequest)
+		return
+	}
+
+	err = app.InterviewResponseModel.SaveAnswer(&data.InterviewResponse{
+		QuestionID:  currentQ.ID,
+		Answer:      answer,
+		SubmittedAt: time.Now().Format(time.RFC3339),
+		SessionID:   sessionID,
+	})
+	if err != nil {
+		app.logger.Error("Failed to save interview response", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	app.logger.Info("Saved answer", "question_id", currentQ.ID, "answer", answer)
+
+	nextIndex := qIndex + 1
+	app.logger.Info("Next question index", "nextIndex", nextIndex)
+
+	if nextIndex >= len(questions) {
+		http.Redirect(w, r, "/interview/complete", http.StatusSeeOther)
+		return
+	}
+
+	nextQ := questions[nextIndex]
+	data := &TemplateData{
+		Title: fmt.Sprintf("Interview Question %d", nextIndex+1),
+		CurrentQuestion: &Question{
+			ID:       nextQ.ID,
+			Text:     nextQ.Text,
+			Type:     nextQ.Type,
+			Required: nextQ.Required,
+			Options: func() []string {
+				var options []string
+				b, _ := json.Marshal(nextQ.Options)
+				json.Unmarshal(b, &options)
+				return options
+			}(),
+		},
+		CurrentIndex:   nextIndex,
+		TotalQuestions: len(questions),
+	}
+
+	app.logger.Info("Rendering template with data", "data", data)
+
+	err = app.render(w, http.StatusOK, "interview.tmpl", data)
+	if err != nil {
+		app.logger.Error("Failed to render template", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+}
+func (app *application) PreviousQuestionHandler(w http.ResponseWriter, r *http.Request) {
+	// Get the current question index from the query parameter
+	qIndexStr := r.URL.Query().Get("q")
+	qIndex := 0
+	if qIndexStr != "" {
+		parsed, err := strconv.Atoi(qIndexStr)
+		if err == nil && parsed > 0 {
+			qIndex = parsed - 1 // Decrement the index for the previous question
+		}
+	}
+
+	// Fetch all active questions from the database
+	questions, err := app.questionModel.GetActiveQuestions()
+	if err != nil {
+		app.logger.Error("Failed to fetch interview questions", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// Ensure the index is within bounds
+	if qIndex < 0 || qIndex >= len(questions) {
+		http.Error(w, "Invalid question index", http.StatusBadRequest)
+		return
+	}
+
+	// Fetch the previous question
+	question := questions[qIndex]
+	questionData := &data.QuestionData{
+		ID:       question.ID,
+		Text:     question.Text,
+		Type:     question.Type,
+		Options:  question.Options,
+		Required: question.Required,
+	}
+
+	// Save the current question index in the session
+	app.sessionManager.Put(r, w, "current_question_index", qIndex)
+
+	// Render the template with the previous question
+	data := &TemplateData{
+		Title:        fmt.Sprintf("Interview Question %d", qIndex+1),
+		Questions:    []*data.QuestionData{questionData},
+		CurrentIndex: qIndex,
+	}
+
+	err = app.render(w, http.StatusOK, "interview.tmpl", data)
+	if err != nil {
+		app.logger.Error("Failed to render interview question", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
 	}
 }

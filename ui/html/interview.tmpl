@@ -10,7 +10,7 @@
 <div class="interview-container">
   <div class="chat-header">🎤 V-Coach Interview</div>
 
-  <form id="interview-form" method="POST" action="/submit-question">
+  <form id="interview-form" method="POST" action="/next/question">
     {{ range .Questions }}
       <div class="question-block" data-question="{{ .Text }}">
         <p class="question-text">{{ .Text }}</p>
@@ -37,9 +37,9 @@
         <input type="hidden" name="question_id" value="{{ .ID }}">
       </div>
     {{ end }}
-    <button type="button" id="next-question">Next Question</button>
+    <button type="submit" id="next-question">Next</button>  
     <button type="button" id="prev-question">Previous Question</button>
-    <button type="submit">Submit</button>
+
   </form>
 
   <button id="speak-current" type="button">🔊 Read Question</button>
