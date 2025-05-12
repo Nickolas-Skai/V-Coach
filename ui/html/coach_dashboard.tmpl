@@ -1,0 +1,35 @@
+{{ define "content" }}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<div class="dashboard-container">
+  <div class="card">
+    <img src="/static/images/teacher.png" alt="Teachers"style="width:100%; height:300px;">
+    <div class="card-overlay">
+      <h3>View Teachers</h3>
+      <p>See and manage assigned teachers</p>
+      <a href="/coach/teachers">Go</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <img src="/static/images/sessions.jpg" alt="Sessions" style="width:100px; height:50%;">
+    <div class="card-overlay">
+      <h3>View Sessions</h3>
+      <p>Review coaching sessions</p>
+      <a href="/coach/sessions">Go</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <img src="/static/images/info.jpg" alt="Information">
+    <div class="card-overlay info-bg">
+      <h3>View Information</h3>
+      <p>Support and learn more</p>
+      <a href="https://code.org" target="_blank">Visit Code.org</a>
+    </div>
+  </div>
+</div>
+{{ end }}

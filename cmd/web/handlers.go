@@ -6,8 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"net/http"
+	"os"
 	"strings"
+	"time"
 
 	//"github.com/cohune-cabbage/di/internal/validator"
 	"strconv"
@@ -309,7 +312,7 @@ func (app *application) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	// Redirect to the homepage
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
-func (app *application) CoachDashBoardHandler(w http.ResponseWriter, r *http.Request) {
+func (app *application) CoachDashboardHandler(w http.ResponseWriter, r *http.Request) {
 	if !app.sessionManager.Exists(r, "user_id") {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -318,18 +321,40 @@ func (app *application) CoachDashBoardHandler(w http.ResponseWriter, r *http.Req
 	data := &TemplateData{
 		Title:           "Coach Dashboard",
 		HeaderText:      "Welcome to Your Dashboard",
-		PageDescription: "Your virtual coaching assistant.",
-		NavLogo:         "ui/static/images/logo.svg",
+		PageDescription: "Manage your coaching sessions here",
+		NavLogo:         "static/images/logo.svg",
 	}
+
 	err := app.render(w, http.StatusOK, "coach_dashboard.tmpl", data)
 	if err != nil {
-		app.logger.Error("failed to render template", "template", "Coach_dashboard.tmpl", "url", r.URL, "method", r.Method, "error", err)
+		app.logger.Error("Failed to render template", "template", "coach_dashboard.tmpl", "error", err)
 		app.serverError(w, err)
 	}
 }
 
 // handlers.go (InterviewHandler with embedded questions and logic)
 func (app *application) InterviewHandler(w http.ResponseWriter, r *http.Request) {
+
+	//call createinterviewsession function if not already created and link it to the user
+	// Check if the user is logged in
+	if !app.sessionManager.Exists(r, "user_id") {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	// Check if the user has an active interview session
+	sessionID := app.sessionManager.GetInt(r, "session_id")
+	if sessionID == 0 {
+		// Create a new interview session
+		sessionID, err := app.InterviewResponseModel.CreateInterviewSession()
+		if err != nil {
+			app.logger.Error("Failed to create interview session", "error", err)
+			app.serverError(w, err)
+			return
+		}
+		app.sessionManager.Put(r, w, "session_id", sessionID)
+		app.logger.Info("Created new interview session", "session_id", sessionID)
+	}
+
 	questions, err := app.questionModel.GetActiveQuestions()
 	if err != nil {
 		app.logger.Error("Failed to fetch interview questions", "error", err)
@@ -349,10 +374,6 @@ func (app *application) InterviewHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Initialize "interview_responses" in the session if not already set
-	responses := app.sessionManager.Get(r, "interview_responses")
-	if err != nil || responses == nil {
-		app.sessionManager.Put(r, w, "interview_responses", []*data.InterviewResponse{})
-	}
 
 	// Determine current question index
 	qIndex := 0
@@ -417,42 +438,23 @@ func (app *application) SubmitResponseHandler(w http.ResponseWriter, r *http.Req
 
 }
 
-// function coach dashboard handler
-func (app *application) CoachDashboardHandler(w http.ResponseWriter, r *http.Request) {
-	if !app.sessionManager.Exists(r, "user_id") {
+// Next question handler
+func (app *application) NextQuestionHandler(w http.ResponseWriter, r *http.Request) {
+	app.logger.Info("Received request for NextQuestionHandler", "method", r.Method, "url", r.URL.String())
+
+	sessionID := app.sessionManager.GetInt(r, "session_id")
+	if sessionID == 0 {
+		app.logger.Warn("Missing session_id in session")
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
-	data := &TemplateData{
-		Title:           "Coach Dashboard",
-		HeaderText:      "Welcome to Your Dashboard",
-		PageDescription: "Your virtual coaching assistant.",
-		NavLogo:         "ui/static/images/logo.svg",
-	}
-	err := app.render(w, http.StatusOK, "coach_dashboard.tmpl", data)
-	if err != nil {
-		app.logger.Error("failed to render template", "template", "Coach_dashboard.tmpl", "url", r.URL, "method", r.Method, "error", err)
-		app.serverError(w, err)
-	}
-}
-
-// Next question handler
-func (app *application) NextQuestionHandler(w http.ResponseWriter, r *http.Request) {
-	// Log the request for debugging
-	app.logger.Info("Received request for NextQuestionHandler", "method", r.Method, "url", r.URL.String())
-
-	// Parse form values
-	if err := r.ParseForm(); err != nil {
-		app.logger.Error("Failed to parse form", "error", err)
+	if err := r.ParseMultipartForm(32 << 20); err != nil { // Increase file upload limit
+		app.logger.Error("Failed to parse multipart form", "error", err)
 		http.Error(w, "Failed to process form", http.StatusBadRequest)
 		return
 	}
 
-	// Log form data
-	app.logger.Info("Form data received", "form", r.Form)
-
-	// Get current question index from URL query
 	qIndex := 0
 	if qStr := r.URL.Query().Get("q"); qStr != "" {
 		if parsed, err := strconv.Atoi(qStr); err == nil && parsed >= 0 {
@@ -464,23 +466,23 @@ func (app *application) NextQuestionHandler(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	// Fetch questions
 	questions, err := app.questionModel.GetActiveQuestions()
-	if err != nil || len(questions) == 0 {
+	if err != nil {
 		app.logger.Error("Failed to fetch questions", "error", err)
 		http.Error(w, "Failed to load questions", http.StatusInternalServerError)
 		return
 	}
-
-	// Log the current question index and total questions
-	app.logger.Info("Current question index", "qIndex", qIndex, "totalQuestions", len(questions))
+	if len(questions) == 0 {
+		app.logger.Warn("No questions available")
+		http.Error(w, "No questions available", http.StatusNotFound)
+		return
+	}
 
 	if qIndex >= len(questions) {
 		http.Redirect(w, r, "/interview/complete", http.StatusSeeOther)
 		return
 	}
 
-	// Validate and save current answer
 	currentQ := questions[qIndex]
 	answer := r.FormValue("answer")
 	isAnswered := false
@@ -493,8 +495,45 @@ func (app *application) NextQuestionHandler(w http.ResponseWriter, r *http.Reque
 		isAnswered = len(selected) > 0
 		answer = strings.Join(selected, ", ")
 	case "file":
-		file, _, err := r.FormFile("answer")
-		isAnswered = err == nil && file != nil
+		file, header, err := r.FormFile("answer")
+		if err != nil {
+			app.logger.Warn("Failed to retrieve file", "error", err)
+		} else if file == nil {
+			app.logger.Warn("No file uploaded")
+		} else {
+			defer file.Close()
+
+			// Define the directory to save the file
+			uploadDir := "./uploads/"
+			if err := os.MkdirAll(uploadDir, os.ModePerm); err != nil {
+				app.logger.Error("Failed to create upload directory", "error", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+
+			// Generate the file path
+			filePath := uploadDir + header.Filename
+
+			// Save the file to the server
+			outFile, err := os.Create(filePath)
+			if err != nil {
+				app.logger.Error("Failed to save file", "error", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+			defer outFile.Close()
+
+			_, err = io.Copy(outFile, file)
+			if err != nil {
+				app.logger.Error("Failed to write file to disk", "error", err)
+				http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+				return
+			}
+
+			app.logger.Info("File uploaded and saved", "filename", header.Filename, "path", filePath)
+			answer = filePath // Save the file path as the answer
+			isAnswered = true
+		}
 	default:
 		isAnswered = answer != ""
 	}
@@ -505,18 +544,21 @@ func (app *application) NextQuestionHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	err = app.InterviewResponseModel.SaveAnswer(&data.InterviewResponse{
+	app.logger.Info("Saving response", "session_id", sessionID, "question_id", currentQ.ID, "answer", answer)
 
-		QuestionID: currentQ.ID,
-		Answer:     answer,
+	err = app.InterviewResponseModel.SaveAnswer(&data.InterviewResponse{
+		SessionID:   sessionID,
+		QuestionID:  currentQ.ID,
+		Answer:      answer,
+		SubmittedAt: time.Now().Format(time.RFC3339),
 	})
 	if err != nil {
 		app.logger.Error("Failed to save interview response", "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
+	app.logger.Info("Saved answer", "question_id", currentQ.ID, "answer", answer)
 
-	// Move to next question
 	nextIndex := qIndex + 1
 	if nextIndex >= len(questions) {
 		http.Redirect(w, r, "/interview/complete", http.StatusSeeOther)
@@ -542,13 +584,14 @@ func (app *application) NextQuestionHandler(w http.ResponseWriter, r *http.Reque
 		TotalQuestions: len(questions),
 	}
 
+	app.logger.Info("Rendering template with data", "data", data)
+
 	err = app.render(w, http.StatusOK, "interview.tmpl", data)
 	if err != nil {
 		app.logger.Error("Failed to render template", "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 }
-
 func (app *application) PreviousQuestionHandler(w http.ResponseWriter, r *http.Request) {
 	// Get the current question index from the query parameter
 	qIndexStr := r.URL.Query().Get("q")

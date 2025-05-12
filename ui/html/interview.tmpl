@@ -10,54 +10,33 @@
 <div class="interview-container">
   <div class="chat-header">🎤 V-Coach Interview</div>
 
-    <form id="interview-form" method="POST" action="/next/question?={{ .CurrentQuestion.ID }}">
-    <input type="hidden" name="interview_id" value="{{ .InterviewID }}">
-    <input type="hidden" name="current_question" value="{{ .CurrentQuestion }}">
-
-    {{ if .Error }}
-      <div class="error-message">{{ .Error }}</div>
-    {{ end }}
-
-    <div class="question-info">
-      <p>Question {{ .NextQuestion }} of {{ len .Questions }}</p>
-    </div>
-
-    <div class="question-instructions">
-      <p>Instructions: {{ .Instructions }}</p>
-    </div>
+  <form id="interview-form" method="POST" action="/next/question?q={{ .CurrentIndex }}" enctype="multipart/form-data">
+    <input type="hidden" name="current_question" value="{{ .CurrentQuestion.ID }}">
 
     <div class="question-text">
-      <p>{{ .Questions .CurrentQuestion }}</p>
+      <p>{{ .CurrentQuestion.Text }}</p>
     </div>
-   {{ range .Questions }}
-      <div class="question-block" data-question="{{ .Text }}">
-        <p class="question-text">{{ .Text }}</p>
 
-        {{ if eq .Type "text" }}
-          <textarea name="answer" rows="3" required></textarea>
+    {{ if eq .CurrentQuestion.Type "text" }}
+      <textarea name="answer" rows="3" required></textarea>
 
-        {{ else if or (eq .Type "radio") (eq .Type "scale") }}
-          {{ $id := .ID }}
-          {{ range .Options }}
-            <label><input type="radio" name="answer" value="{{ . }}" required> {{ . }}</label><br>
-          {{ end }}
+    {{ else if or (eq .CurrentQuestion.Type "radio") (eq .CurrentQuestion.Type "scale") }}
+      {{ range .CurrentQuestion.Options }}
+        <label><input type="radio" name="answer" value="{{ . }}" required> {{ . }}</label><br>
+      {{ end }}
 
-        {{ else if eq .Type "checkbox" }}
-          {{ $id := .ID }}
-          {{ range .Options }}
-            <label><input type="checkbox" name="answer" value="{{ . }}"> {{ . }}</label><br>
-          {{ end }}
+    {{ else if eq .CurrentQuestion.Type "checkbox" }}
+      {{ range .CurrentQuestion.Options }}
+        <label><input type="checkbox" name="answer" value="{{ . }}"> {{ . }}</label><br>
+      {{ end }}
 
-        {{ else if eq .Type "file" }}
-          <input type="file" name="answer">
-        {{ end }}
-
-        <input type="hidden" name="question_id" value="{{ .ID }}">
-      </div>
+    {{ else if eq .CurrentQuestion.Type "file" }}
+      <input type="file" name="answer">
     {{ end }}
-    <button type="submit" id="next-question">Next</button>  
-    <button type="button" id="prev-question">Previous Question</button>
 
+    <input type="hidden" name="question_id" value="{{ .CurrentQuestion.ID }}">
+    <button type="submit" id="next-question">Next Question</button>
+    <button type="button" id="prev-question">Previous Question</button>
   </form>
 
   <button id="speak-current" type="button">🔊 Read Question</button>
