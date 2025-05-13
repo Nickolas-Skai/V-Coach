@@ -143,4 +143,3 @@ func (app *application) addDefaultData(td *TemplateData, _ http.ResponseWriter, 
 
 	return td
 }
-
