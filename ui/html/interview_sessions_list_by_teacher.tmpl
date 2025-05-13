@@ -1,0 +1,42 @@
+{{template "base" . }}
+{{define "content"}}
+<div style="max-width: 900px; margin: 40px auto; font-family: Arial, sans-serif;">
+    <h1 style="text-align: center; margin-bottom: 30px; color: #333;">Interview Sessions by Teacher</h1>
+
+    {{if .Sessions}}
+        <table style="width: 100%; border-collapse: collapse; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <thead style="background-color: #f5f5f5;">
+                <tr>
+                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Session ID</th>
+                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Teacher ID</th>
+                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Date</th>
+                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #ddd;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Sessions}}
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 10px;">{{.ID}}</td>
+                        <td style="padding: 10px;">{{.TeacherID}}</td>
+                        <td style="padding: 10px;">{{.StartTime.Format "02 Jan 2006, 03:04 PM"}}</td>
+                        <td style="padding: 10px;">
+                            <a href="/interview_sessions/{{.ID}}" 
+                               style="text-decoration: none; color: white; background-color: #007BFF; padding: 6px 12px; border-radius: 4px; margin-right: 8px; display: inline-block;">
+                               View
+                            </a>
+                            <a href="/interview_sessions/{{.ID}}/delete" 
+                               style="text-decoration: none; color: white; background-color: #dc3545; padding: 6px 12px; border-radius: 4px; display: inline-block;">
+                               Delete
+                            </a>
+                        </td>
+                    </tr>
+                {{end}}
+            </tbody>
+        </table>
+    {{else}}
+        <p style="text-align: center; padding: 20px; background-color: #f9f9f9; border: 1px solid #ddd; border-radius: 6px; color: #555;">
+            No interview sessions found for the selected teacher.
+        </p>
+    {{end}}
+</div>
+{{end}}

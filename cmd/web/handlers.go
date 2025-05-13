@@ -17,10 +17,16 @@ import (
 
 	"github.com/gorilla/csrf"
 
+	"encoding/gob"
 	"github.com/cohune-cabbage/di/internal/data"
 	"golang.org/x/crypto/bcrypt"
 )
 
+func init() {
+	gob.Register(&data.Login{})   // Register individual struct
+	gob.Register([]*data.Login{}) // Register slices if storing multiple logins
+	gob.Register(&data.User{})    // Optional: any other types stored in session
+}
 func (app *application) serverError(w http.ResponseWriter, _ error) {
 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
@@ -43,6 +49,11 @@ func (app *application) homepage(w http.ResponseWriter, r *http.Request) {
 		app.logger.Error("failed to render template", "template", "homepage.tmpl", "url", r.URL, "method", r.Method, "error", err)
 		app.serverError(w, err)
 	}
+	//load the user id and role from the session
+	userID := app.sessionManager.GetInt(r, "user_id")
+	role := app.sessionManager.GetString(r, "user_role")
+	app.logger.Info("User ID", "user_id", userID)
+	app.logger.Info("User Role", "user_role", role)
 
 }
 
@@ -59,7 +70,7 @@ func (app *application) LoginPageHandler(w http.ResponseWriter, r *http.Request)
 		HeaderText:      "Login to V-Coach",
 		PageDescription: "Your virtual coaching assistant.",
 		NavLogo:         "static/images/logo.svg",
-		CSRFToken:       template.JS(csrf.Token(r)),
+		CSRFToken:       template.JS(csrf.TemplateField(r)),
 	}, w, r)
 
 	// Render the login page
@@ -138,20 +149,21 @@ func (app *application) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		app.serverError(w, err)
 		return
 	}
-	//get the user role
-	role, err := app.loginModel.GetUserRole(strconv.Itoa(user))
+	//getuserrolebyid
+	role, err := app.loginModel.GetUserRoleByID(int64(user))
 	if err != nil {
 		app.logger.Error("Failed to get user role", "error", err)
 		app.serverError(w, err)
 		return
 	}
-	// Store the user role in the session
+	// Store user role in the session
 	err = app.sessionManager.Put(r, w, "user_role", role)
 	if err != nil {
 		app.logger.Error("Failed to store user role in session", "error", err)
 		app.serverError(w, err)
 		return
 	}
+	app.logger.Info("User role stored in session", "user_role", role)
 
 	// Redirect to the appropriate dashboard based on the user role
 
@@ -184,7 +196,7 @@ func (app *application) SignUpPageHandler(w http.ResponseWriter, r *http.Request
 			ID   int
 			Name string
 		}
-		err := rows.Scan(&school.ID, &school.Name)
+		err := rows.Scan(&school.ID, sql.RawBytes{}, &school.Name)
 		if err != nil {
 			app.logger.Error("Failed to scan school row", "error", err)
 			app.serverError(w, err)
@@ -697,6 +709,222 @@ func (app *application) PreviousQuestionHandler(w http.ResponseWriter, r *http.R
 	err = app.render(w, http.StatusOK, "interview.tmpl", data)
 	if err != nil {
 		app.logger.Error("Failed to render interview question", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+}
+
+// handler to get all a list of all the teachers
+func (app *application) GetAllTeachersHandler(w http.ResponseWriter, r *http.Request) {
+	// Check if the user is logged in
+	if !app.sessionManager.Exists(r, "user_id") {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	// Fetch all teachers from the database
+	teachers, err := app.UserModel.GetAllTeachers()
+	if err != nil {
+		app.logger.Error("Failed to fetch teachers from database", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// Prepare template data
+	data := app.addDefaultData(&TemplateData{
+		Title:           "All Teachers",
+		HeaderText:      "List of All Teachers",
+		PageDescription: "Manage your coaching sessions here",
+		NavLogo:         "static/images/logo.svg",
+	}, w, r)
+
+	data.Teachers = make([]struct {
+		ID     int
+		Name   string
+		Email  string
+		Age    int
+		School string
+	}, len(teachers))
+	for i, teacher := range teachers {
+		data.Teachers[i] = struct {
+			ID     int
+			Name   string
+			Email  string
+			Age    int
+			School string
+		}{
+			ID:    teacher.ID,
+			Name:  teacher.Name,
+			Email: teacher.Email,
+			Age:   teacher.Age,
+			School: func() string {
+				if teacher.School.Valid {
+					return strconv.FormatInt(teacher.School.Int64, 10)
+				}
+				return ""
+			}(),
+		}
+	}
+
+	err = app.render(w, http.StatusOK, "teacher_list.tmpl", data)
+	if err != nil {
+		app.logger.Error("Failed to render template", "template", "all_teachers.tmpl", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+}
+
+// teacher details
+
+func (app *application) TeacherDetailHandler(w http.ResponseWriter, r *http.Request) {
+	// Check if the user is logged in
+	if !app.sessionManager.Exists(r, "user_id") {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	idStr := strings.TrimPrefix(r.URL.Path, "/coach/teachers/")
+	idStr = strings.TrimSuffix(idStr, "/details")
+
+	app.logger.Info("trimmed successfully", "idStr", idStr)
+
+	// Validate the teacher ID
+	if idStr == "" {
+		app.logger.Warn("Invalid teacher ID")
+		http.Error(w, "Invalid teacher ID", http.StatusBadRequest)
+		return
+	}
+
+	teacherID, err := strconv.Atoi(idStr)
+	if err != nil || teacherID <= 0 {
+		app.clientError(w, http.StatusBadRequest)
+		return
+	}
+
+	// Fetch teacher details by ID
+	teacher, err := app.UserModel.GetTeacherByID(teacherID)
+	if err != nil {
+		app.logger.Error("Failed to fetch teacher details", "teacherID", teacherID, "error", err)
+		app.serverError(w, err)
+		return
+	}
+	app.logger.Info("Fetched teacher details", "teacherID", teacherID)
+	//using school id to get the school name
+	schoolName, err := app.UserModel.GetSchoolNameByID(int(teacher.School.Int64))
+	if err != nil {
+		app.logger.Error("Failed to fetch school name", "schoolID", teacher.School.Int64, "error", err)
+		app.serverError(w, err)
+		return
+	}
+	if err != nil {
+		app.logger.Error("Failed to fetch school name", "schoolID", teacher.School.Int64, "error", err)
+		app.serverError(w, err)
+		return
+	}
+
+	app.logger.Info("Fetched school details", "schoolID", teacher.School.Int64)
+
+	// Prepare template data with the name of the school
+	data := &TemplateData{
+		Title: "Teacher Details",
+		Teachers: []struct {
+			ID     int
+			Name   string
+			Email  string
+			Age    int
+			School string
+		}{
+			{
+				ID:     teacher.ID,
+				Name:   teacher.Name,
+				Email:  teacher.Email,
+				Age:    teacher.Age,
+				School: strconv.Itoa(schoolName),
+			},
+		},
+	}
+
+	// Render the template
+	err = app.render(w, http.StatusOK, "teacher_details.tmpl", data)
+	if err != nil {
+		app.logger.Error("Failed to render template", "template", "teacher_details.tmpl", "error", err)
+		app.serverError(w, err)
+		return
+	}
+}
+
+//teacher interview list handler
+
+func (app *application) AllInterviewSessionsListbyTeacherHandler(w http.ResponseWriter, r *http.Request) {
+	// Check if the user is logged in
+	if !app.sessionManager.Exists(r, "user_id") {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	// Fetch all teachers from the database
+	teacherID := app.sessionManager.GetInt(r, "user_id")
+	if teacherID == 0 {
+		app.logger.Warn("Missing teacher ID in session")
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	//get id from the url
+	idStr := strings.TrimPrefix(r.URL.Path, "/coach/teachers/")
+	idStr = strings.TrimSuffix(idStr, "/sessions")
+	app.logger.Info("trimmed successfully", "idStr", idStr)
+	// Validate the teacher ID
+	if idStr == "" {
+		app.logger.Warn("Invalid teacher ID")
+		http.Error(w, "Invalid teacher ID", http.StatusBadRequest)
+		return
+	}
+	teacherID, err := strconv.Atoi(idStr)
+	if err != nil || teacherID <= 0 {
+		app.clientError(w, http.StatusBadRequest)
+		return
+	}
+
+	sessions, err := app.InterviewResponseModel.GetAllSessionsByTeacherID(teacherID)
+	if err != nil {
+		app.logger.Error("Failed to fetch teacher from database", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	app.logger.Info("Fetched interview sessions", "teacherID", teacherID)
+	// Check if there are no sessions
+	if len(sessions) == 0 {
+		app.logger.Warn("No interview sessions found for the teacher")
+		http.Error(w, "No interview sessions found", http.StatusNotFound)
+		return
+	}
+
+	// Prepare template data
+	data := app.addDefaultData(&TemplateData{
+		Title:           "Ale",
+		HeaderText:      fmt.Sprintf("List of all the sessions made by %s", "Teacher Name"),
+		PageDescription: "Manage your coaching sessions here",
+		NavLogo:         "static/images/logo.svg",
+	}, w, r)
+	data.Sessions = make([]struct {
+		ID        int
+		TeacherID int
+		StartTime time.Time
+	}, len(sessions))
+	for i, session := range sessions {
+		data.Sessions[i] = struct {
+			ID        int
+			TeacherID int
+			StartTime time.Time
+		}{
+			ID:        session,    // Assuming session is an int representing the ID
+			TeacherID: teacherID,  // Use teacherID from the context
+			StartTime: time.Now(), // Replace with actual start time if available
+		}
+	}
+	err = app.render(w, http.StatusOK, "interview_sessions_list_by_teacher.tmpl", data)
+	if err != nil {
+		app.logger.Error("Failed to render template", "template", "interview_sessions_list.tmpl", "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}

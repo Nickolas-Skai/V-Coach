@@ -21,6 +21,9 @@ func (app *application) routes() http.Handler {
 	mux.HandleFunc("/previous/question", app.PreviousQuestionHandler)
 	mux.Handle("/logout", app.requireAuthentication(http.HandlerFunc(app.LogoutHandler)))
 	mux.HandleFunc("/interview/success", app.InterviewSuccessHandler)
+	mux.Handle("/coach/teachers", app.requireRole("coach", http.HandlerFunc(app.GetAllTeachersHandler)))
+	mux.HandleFunc("/coach/teachers//details", app.TeacherDetailHandler)
+	mux.HandleFunc("/coach/teachers//sessions", app.AllInterviewSessionsListbyTeacherHandler)
 
 	return app.loggingMiddleware(mux)
 }

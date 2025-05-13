@@ -1,0 +1,73 @@
+{{ define "content" }}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ .Title }}</title>
+  <link rel="stylesheet" href="/static/css/styles.css">
+  <style>
+    .teacher-detail-container {
+      max-width: 600px;
+      margin: 40px auto;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+      padding: 30px;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    .teacher-detail-container h2 {
+      text-align: center;
+      color: #444;
+      margin-bottom: 20px;
+    }
+
+    .teacher-detail-container .detail-row {
+      margin-bottom: 15px;
+    }
+
+    .teacher-detail-container .label {
+      font-weight: bold;
+      color: #333;
+    }
+
+    .teacher-detail-container .value {
+      margin-left: 10px;
+      color: #666;
+    }
+
+    .back-btn {
+      display: block;
+      margin: 30px auto 0;
+      background: #005f73;
+      color: #fff;
+      padding: 10px 20px;
+      text-align: center;
+      border-radius: 6px;
+      text-decoration: none;
+      width: fit-content;
+    }
+
+    .back-btn:hover {
+      background: #0a9396;
+    }
+  </style>
+</head>
+<body>
+  <div class="teacher-detail-container">
+    <h2>Teacher Details</h2>
+
+        {{ range .Teachers }}
+        <div class="detail-row"><span class="label">Name:</span> <span class="value">{{ .Name }}</span></div>
+        <div class="detail-row"><span class="label">Email:</span> <span class="value">{{ .Email }}</span></div>
+        <div class="detail-row"><span class="label">Age:</span> <span class="value">{{ .Age }}</span></div>
+        <div class="detail-row"><span class="label">School:</span> <span class="value">{{ .School }}</span></div>
+        <hr>
+        {{ end }}
+
+
+    <a href="/coach/teachers" class="back-btn">← Back to Teacher List</a>
+  </div>
+</body>
+</html>
+{{ end }}

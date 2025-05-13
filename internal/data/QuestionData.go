@@ -255,7 +255,7 @@ func (m *QuestionModel) GetActiveQuestions() ([]*QuestionModel, error) {
 		var q QuestionModel
 		var optionsJSON []byte
 
-		err := rows.Scan(&q.ID, &q.Text, &q.Type, &optionsJSON)
+		err := rows.Scan(&q.ID, &q.Text, &q.Type)
 		if err != nil {
 			return nil, err
 		}
@@ -303,7 +303,7 @@ func (m *InterviewResponseModel) GetInterviewResponsesBySessionID(sessionID int)
 	var responses []*InterviewResponse
 	for rows.Next() {
 		var response InterviewResponse
-		err := rows.Scan(&response.ID, &response.QuestionID, &response.Answer, &response.AudioURL, &response.ConfidenceRating, &response.SubmittedAt)
+		err := rows.Scan(&response.ID, &response.QuestionID, &response.Answer)
 		if err != nil {
 			return nil, err
 		}
@@ -330,4 +330,26 @@ func (m *InterviewResponseModel) CreateInterviewSession(teacherID int) (int, err
 		return 0, err
 	}
 	return sessionID, nil
+}
+
+// get all session IDs made by a teacher (user)
+func (m *InterviewResponseModel) GetAllSessionsByTeacherID(teacherID int) ([]int, error) {
+	query := `SELECT id FROM sessions WHERE teacher_id = $1`
+	rows, err := m.DB.Query(query, teacherID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var sessionIDs []int
+	for rows.Next() {
+		var sessionID int
+		err := rows.Scan(&sessionID)
+		if err != nil {
+			return nil, err
+		}
+		sessionIDs = append(sessionIDs, sessionID)
+	}
+
+	return sessionIDs, nil
 }

@@ -61,23 +61,3 @@ func (m *ResponseModel) GetByID(id int) (*Response, error) {
 	}
 	return &response, nil
 }
-func (m *ResponseModel) GetBySessionID(sessionID int) ([]Response, error) {
-	// Retrieve all responses for a given session ID
-	query := `SELECT id, session_id, question_id, response_text, audio_url, confidence, submitted_at FROM responses WHERE session_id = $1`
-	rows, err := m.DB.Query(query, sessionID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var responses []Response
-	for rows.Next() {
-		var response Response
-		err := rows.Scan(&response.ID, &response.SessionID, &response.QuestionID, &response.ResponseText, &response.AudioURL, &response.Confidence, &response.SubmittedAt)
-		if err != nil {
-			return nil, err
-		}
-		responses = append(responses, response)
-	}
-	return responses, nil
-}

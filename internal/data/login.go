@@ -103,46 +103,6 @@ func (m *LoginModel) GetByID(id int64) (*Login, error) {
 	}
 	return &login, nil
 }
-func (m *LoginModel) GetAll() ([]*Login, error) {
-	// Retrieve all users from the database
-	query := `SELECT id, email, password_hash, created_at, role FROM users`
-	rows, err := m.DB.Query(query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var logins []*Login
-	for rows.Next() {
-		var login Login
-		err := rows.Scan(&login.ID, &login.Email, &login.Password, &login.CreatedAt, &login.Role)
-		if err != nil {
-			return nil, err
-		}
-		logins = append(logins, &login)
-	}
-	return logins, nil
-}
-func (m *LoginModel) GetByRole(role string) ([]*Login, error) {
-	// Retrieve logins from the database by role
-	query := `SELECT id, email, password_hash, created_at, role FROM users WHERE role = $1`
-	rows, err := m.DB.Query(query, role)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var logins []*Login
-	for rows.Next() {
-		var login Login
-		err := rows.Scan(&login.ID, &login.Email, &login.Password, &login.CreatedAt, &login.Role)
-		if err != nil {
-			return nil, err
-		}
-		logins = append(logins, &login)
-	}
-	return logins, nil
-}
 func (m *LoginModel) GetByEmailAndPassword(email, password string) (*Login, error) {
 	// Retrieve the login from the database by email and password
 	query := `SELECT id, email, password_hash, created_at, role FROM users WHERE email = $1 AND password = $2`
@@ -241,25 +201,20 @@ func (m *LoginModel) Authenticate(email, password string) (int, error) {
 }
 
 // /get user by role
-func (m *LoginModel) GetUserRole(role string) ([]*Login, error) {
+
+// get role of the user that is logged in
+func (m *LoginModel) GetUserRoleByID(id int64) (string, error) {
 	// Retrieve the user's role from the database
-	query := `SELECT id, email, password_hash, created_at, role FROM users WHERE role = $1`
-	rows, err := m.DB.Query(query, role)
+	query := `SELECT role FROM users WHERE id = $1`
+	row := m.DB.QueryRow(query, id)
+
+	var role string
+	err := row.Scan(&role)
 	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var logins []*Login
-	for rows.Next() {
-		var login Login
-		err := rows.Scan(&login.ID, &login.Email, &login.Password, &login.CreatedAt, &login.Role)
-		if err != nil {
-			return nil, err
+		if err == sql.ErrNoRows {
+			return "", nil // No user found with the given ID
 		}
-		logins = append(logins, &login)
+		return "", err // Some other error occurred
 	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return logins, nil
+	return role, nil
 }

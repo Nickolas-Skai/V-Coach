@@ -2,10 +2,10 @@ package main
 
 import (
 	"errors"
+	"github.com/cohune-cabbage/di/internal/data"
 	"html/template"
 	"net/http"
-
-	"github.com/cohune-cabbage/di/internal/data"
+	"time"
 )
 
 type TemplateData struct {
@@ -59,6 +59,19 @@ type TemplateData struct {
 	CSRFToken             template.JS
 	ErrInvalidCredentials error
 	ErrInvalidEmail       error
+	Teachers              []struct {
+		ID     int
+		Name   string
+		Email  string
+		Age    int
+		School string
+	}
+	CSRFField template.JS
+	Sessions  []struct {
+		ID        int
+		TeacherID int
+		StartTime time.Time
+	}
 }
 
 func NewTemplateData() *TemplateData {

@@ -25,6 +25,7 @@ type application struct {
 	signUpModel            *data.SignUpModel
 	loginModel             *data.LoginModel
 	sessionManager         *data.SessionManager
+	UserModel              *data.UserModel
 }
 
 type HomePageData struct {
@@ -75,6 +76,7 @@ func main() {
 		questionModel:          &data.QuestionModel{DB: db},
 		InterviewResponseModel: data.NewInterviewResponseModel(db),
 		sessionManager:         data.NewSessionManager(db, os.Getenv("SESSION_KEY")),
+		UserModel:              &data.UserModel{DB: db},
 	}
 
 	err = app.serve()
