@@ -471,12 +471,27 @@ func (app *application) InterviewHandler(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-func (app *application) SubmitResponseHandler(w http.ResponseWriter, r *http.Request) {
+// interviewsuccess
+func (app *application) InterviewSuccessHandler(w http.ResponseWriter, r *http.Request) {
+	// Check if the user is logged in
 	if !app.sessionManager.Exists(r, "user_id") {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
+	// Prepare template data
+	data := app.addDefaultData(&TemplateData{
+		Title:           "Interview Completed",
+		HeaderText:      "Thank You for Completing the Interview",
+		PageDescription: "Your responses have been recorded.",
+		NavLogo:         "static/images/logo.svg",
+	}, w, r)
+
+	err := app.render(w, http.StatusOK, "Interview_success.tmpl", data)
+	if err != nil {
+		app.logger.Error("failed to render template", "template", "Interview_success.tmpl", "url", r.URL, "method", r.Method, "error", err)
+		app.serverError(w, err)
+	}
 }
 
 // Next question handler

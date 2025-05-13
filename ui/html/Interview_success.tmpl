@@ -1,9 +1,11 @@
+{{template "base" .}}
+{{ define "content" }}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Session Completed</title>
+    <title>{{ .Title }}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -29,14 +31,9 @@
     </style>
 </head>
 <body>
-    <h1>Session Completed</h1>
-    <p>Congratulations! You have successfully completed your session.</p>
-    <button class="button" onclick="goHome()">Go Home</button>
-
-    <script>
-        function goHome() {
-            window.location.href = '/';
-        }
-    </script>
+    <h1>{{ .HeaderText }}</h1>
+    <p>{{ .PageDescription }}</p>
+    <a class="button" href="/">Go Home</a>
 </body>
 </html>
+{{ end }}

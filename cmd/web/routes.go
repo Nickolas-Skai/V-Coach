@@ -20,6 +20,7 @@ func (app *application) routes() http.Handler {
 	mux.HandleFunc("/next/question", app.NextQuestionHandler)
 	mux.HandleFunc("/previous/question", app.PreviousQuestionHandler)
 	mux.Handle("/logout", app.requireAuthentication(http.HandlerFunc(app.LogoutHandler)))
+	mux.HandleFunc("/interview/success", app.InterviewSuccessHandler)
 
 	return app.loggingMiddleware(mux)
 }
