@@ -73,6 +73,10 @@ button:hover {
   margin-top: 1.5rem;
   display: flex;
   gap: 1rem;
+    position: center;
+  /* Center the button */
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .project-intro button {
@@ -83,6 +87,7 @@ button:hover {
   border-radius: 5px;
   cursor: pointer;
   font-weight: bold;
+
 }
 
 .project-intro button:hover {

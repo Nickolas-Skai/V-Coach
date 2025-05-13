@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"html/template"
 	"net/http"
 
@@ -52,10 +53,12 @@ type TemplateData struct {
 		ID   int
 		Name string
 	}
-	UserRole        string
-	CurrentUserID   int
-	CurrentUserRole string
-	CSRFToken       template.JS
+	UserRole              string
+	CurrentUserID         int
+	CurrentUserRole       string
+	CSRFToken             template.JS
+	ErrInvalidCredentials error
+	ErrInvalidEmail       error
 }
 
 func NewTemplateData() *TemplateData {
@@ -67,6 +70,8 @@ func NewTemplateData() *TemplateData {
 		QuestionsJSON: template.JS("[]"), // Initialize with an empty JSON array as a valid template.JS value
 	}
 }
+
+var ErrInvalidCredentials = errors.New("invalid credentials")
 
 func NewHomePageData() *HomePageData {
 	return &HomePageData{
@@ -90,14 +95,51 @@ func (app *application) addDefaultData(td *TemplateData, _ http.ResponseWriter, 
 		td = &TemplateData{}
 	}
 
-	// Check if the user is authenticated
-	td.IsAuthenticated = app.sessionManager.Exists(r, "IsAuthenticated")
-
-	// Add user role and ID if authenticated
-	if td.IsAuthenticated {
-		td.CurrentUserID = app.sessionManager.GetInt(r, "user_id")
-		td.UserRole = app.sessionManager.GetString(r, "user_role")
+	td.IsAuthenticated = app.IsAuthenticated(r)
+	td.CSRFToken = template.JS(app.sessionManager.GetString(r, "csrf_token"))
+	td.UserRole = app.sessionManager.GetString(r, "user_role")
+	td.CurrentUserID = app.sessionManager.GetInt(r, "user_id")
+	td.CurrentUserRole = app.sessionManager.GetString(r, "user_role")
+	td.Schools = []struct {
+		ID   int
+		Name string
+	}{
+		{ID: 1, Name: "School A"},
+		{ID: 2, Name: "School B"},
+		{ID: 3, Name: "School C"},
 	}
+	td.ErrInvalidCredentials = ErrInvalidCredentials
+	td.ErrInvalidEmail = errors.New("invalid email address")
+	td.Data = make(map[string]interface{})
+	td.Data["user_id"] = td.CurrentUserID
+	td.Data["user_role"] = td.CurrentUserRole
+	td.Data["csrf_token"] = td.CSRFToken
+	td.Data["is_authenticated"] = td.IsAuthenticated
+	td.Data["schools"] = td.Schools
+	td.Data["questions"] = td.Questions
+	td.Data["questions_json"] = td.QuestionsJSON
+	td.Data["interview_response"] = td.InterviewResponse
+	td.Data["interview_response_json"] = td.InterviewResponseJSON
+	td.Data["success_message"] = td.SuccessMessage
+	td.Data["error_message"] = td.ErrorMessage
+	td.Data["next_url"] = td.NextURL
+	td.Data["previous_url"] = td.PreviousURL
+	td.Data["show_next_button"] = td.ShowNextButton
+	td.Data["current_index"] = td.CurrentIndex
+	td.Data["total_questions"] = td.TotalQuestions
+	td.Data["current_question"] = td.CurrentQuestion
+	td.Data["question_data"] = td.QuestionData
+	td.Data["question_data_errors"] = td.QuestionDataErrors
+	td.Data["question_data_form_data"] = td.QuestionDataFormData
+	td.Data["question_data_id"] = td.QuestionDataID
+	td.Data["question_data_text"] = td.QuestionDataText
+	td.Data["question_data_type"] = td.QuestionDataType
+	td.Data["question_data_options"] = td.QuestionDataOptions
+	td.Data["question_data_required"] = td.QuestionDataRequired
+	td.Data["question_data_model"] = td.QuestionDataModel
+
+	td.Data["question_data_db"] = td.QuestionDataDB
+	td.Data["question_type"] = td.QuestionType
 
 	return td
 }

@@ -215,29 +215,29 @@ func (m *LoginModel) GetUserByID(id int64) (*Login, error) {
 }
 
 // authenticate user
-func (m *LoginModel) Authenticate(email, password string) (*Login, error) {
-	// Retrieve the user from the database by email
-	query := `SELECT id, email, password_hash, created_at, role FROM users WHERE email = $1`
-	row := m.DB.QueryRow(query, email)
+func (m *LoginModel) Authenticate(email, password string) (int, error) {
 
-	var login Login
-	err := row.Scan(&login.ID, &login.Email, &login.Password, &login.CreatedAt, &login.Role)
+	var id int64
+	var hashedPassword []byte
+	var createdAt time.Time
+
+	query := `SELECT id, password_hash, created_at FROM users WHERE email = $1`
+	err := m.DB.QueryRow(query, email).Scan(&id, &hashedPassword, &createdAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, nil // No user found with the given email
+			return 0, nil // No user found with the given email
 		}
-		return nil, err // Some other error occurred
+		return 0, err // Some other error occurred
 	}
 
-	// check if the password
-	err = bcrypt.CompareHashAndPassword([]byte(login.Password), []byte(password))
+	// Compare the provided password with the hashed password
+	err = bcrypt.CompareHashAndPassword(hashedPassword, []byte(password))
 	if err != nil {
-		if err == bcrypt.ErrMismatchedHashAndPassword {
-			return nil, fmt.Errorf("invalid password")
-		}
-		return nil, err // Some other error occurred
+		return 0, fmt.Errorf("invalid password")
 	}
-	return &login, nil
+
+	// Return the authenticated user
+	return int(id), nil
 }
 
 // /get user by role

@@ -54,13 +54,13 @@ func (app *application) LoginPageHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Prepare template data
-	data := &TemplateData{
+	data := app.addDefaultData(&TemplateData{
 		Title:           "Login",
 		HeaderText:      "Login to V-Coach",
 		PageDescription: "Your virtual coaching assistant.",
 		NavLogo:         "static/images/logo.svg",
 		CSRFToken:       template.JS(csrf.Token(r)),
-	}
+	}, w, r)
 
 	// Render the login page
 	err := app.render(w, http.StatusOK, "login.tmpl", data)
@@ -95,8 +95,8 @@ func (app *application) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Authenticate the user
-	userID, err := app.loginModel.Authenticate(email, password)
+	// Authenticate the user using the new query
+	user, err := app.loginModel.Authenticate(email, password)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			app.logger.Warn("Invalid login attempt", "email", email)
@@ -108,40 +108,22 @@ func (app *application) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch the user details
-	user, err := app.loginModel.GetUserByID(userID.ID)
-	if err != nil {
-		app.logger.Error("Failed to fetch user details", "error", err)
-		app.serverError(w, err)
-		return
-	}
-	if user == nil {
-		app.logger.Warn("User not found", "user_id", userID.ID)
-		app.clientError(w, http.StatusUnauthorized)
-		return
-	}
-
 	// Store user ID and role in the session
-
-	err = app.sessionManager.Put(r, w, "user_id", user.ID)
+	err = app.sessionManager.Put(r, w, "user_id", user)
 	if err != nil {
 		app.logger.Error("Failed to store user ID in session", "error", err)
 		app.serverError(w, err)
 		return
 	}
-	err = app.sessionManager.Put(r, w, "user_role", user.Role)
-	if err != nil {
-		app.logger.Error("Failed to store user role in session", "error", err)
-		app.serverError(w, err)
-		return
-	}
-	//set authenticated to true
+	app.logger.Info("User ID stored in session", "user_id", user)
+	// Set authenticated to true
 	err = app.sessionManager.Put(r, w, "IsAuthenticated", true)
 	if err != nil {
 		app.logger.Error("Failed to store IsAuthenticated in session", "error", err)
 		app.serverError(w, err)
 		return
 	}
+
 	// Set the session expiration time
 	session, err := app.sessionManager.Store.Get(r, "session")
 	if err != nil {
@@ -156,13 +138,30 @@ func (app *application) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		app.serverError(w, err)
 		return
 	}
+	//get the user role
+	role, err := app.loginModel.GetUserRole(strconv.Itoa(user))
+	if err != nil {
+		app.logger.Error("Failed to get user role", "error", err)
+		app.serverError(w, err)
+		return
+	}
+	// Store the user role in the session
+	err = app.sessionManager.Put(r, w, "user_role", role)
+	if err != nil {
+		app.logger.Error("Failed to store user role in session", "error", err)
+		app.serverError(w, err)
+		return
+	}
+
 	// Redirect to the appropriate dashboard based on the user role
-	if user.Role == "coach" {
-		http.Redirect(w, r, "/coach_dashboard", http.StatusSeeOther)
-	} else if user.Role == "student" {
-		http.Redirect(w, r, "/homepage", http.StatusSeeOther)
-	} else {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+
+	// Render the login page
+	err = app.render(w, http.StatusOK, "login.tmpl", nil)
+	if err != nil {
+		app.logger.Error("failed to render template", "template", "login.tmpl", "url", r.URL, "method", r.Method, "error", err)
+		app.serverError(w, err)
 	}
 }
 func (app *application) SignUpPageHandler(w http.ResponseWriter, r *http.Request) {
@@ -330,12 +329,12 @@ func (app *application) CoachDashboardHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	data := &TemplateData{
+	data := app.addDefaultData(&TemplateData{
 		Title:           "Coach Dashboard",
 		HeaderText:      "Welcome to Your Dashboard",
 		PageDescription: "Manage your coaching sessions here",
 		NavLogo:         "static/images/logo.svg",
-	}
+	}, w, r)
 
 	err := app.render(w, http.StatusOK, "coach_dashboard.tmpl", data)
 	if err != nil {
@@ -362,14 +361,16 @@ func (app *application) InterviewHandler(w http.ResponseWriter, r *http.Request)
 	//log what isAuthenticated is having
 	app.logger.Info("IsAuthenticated", "IsAuthenticated", app.sessionManager.Exists(r, "IsAuthenticated"))
 
-	//says its zero 
+	//says its zero
 	app.logger.Info("User ID", "user_id", app.sessionManager.GetInt(r, "user_id"))
 	// Check if the session ID exists in the session
+	TeacherID := app.sessionManager.GetInt(r, "user_id")
+	app.logger.Info("Teacher ID", "user_id", TeacherID)
 
 	sessionID := app.sessionManager.GetInt(r, "session_id")
 	if sessionID == 0 {
 		// Create a new interview session
-		sessionID, err := app.InterviewResponseModel.CreateInterviewSession()
+		sessionID, err := app.InterviewResponseModel.CreateInterviewSession(TeacherID)
 		if err != nil {
 			app.logger.Error("Failed to create interview session", "error", err)
 			app.serverError(w, err)
@@ -377,6 +378,9 @@ func (app *application) InterviewHandler(w http.ResponseWriter, r *http.Request)
 		}
 		app.sessionManager.Put(r, w, "session_id", sessionID)
 		app.logger.Info("Created new interview session", "session_id", sessionID)
+		app.logger.Info("User ID", "user_id", app.sessionManager.GetInt(r, "user_id"))
+		app.logger.Info("Session ID", "session_id", sessionID)
+		app.logger.Info("Teacher ID", "user_id", TeacherID)
 	}
 
 	questions, err := app.questionModel.GetActiveQuestions()
@@ -408,7 +412,6 @@ func (app *application) InterviewHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	current := questions[qIndex]
-
 	questionData := &data.QuestionData{
 		ID:   current.ID,
 		Text: current.Text,
@@ -424,6 +427,20 @@ func (app *application) InterviewHandler(w http.ResponseWriter, r *http.Request)
 		Required: current.Required,
 	}
 
+	// Add default data to the template
+	data := app.addDefaultData(&TemplateData{
+		Title: fmt.Sprintf("Interview Question %d", qIndex+1),
+		CurrentQuestion: &Question{
+			ID:       questionData.ID,
+			Text:     questionData.Text,
+			Type:     questionData.Type,
+			Options:  questionData.Options,
+			Required: questionData.Required,
+		},
+		TotalQuestions: len(questions),
+		CurrentIndex:   qIndex,
+	}, w, r)
+
 	// Store state in session
 	app.sessionManager.Put(r, w, "current_question_index", qIndex)
 	app.sessionManager.Put(r, w, "current_question_id", current.ID)
@@ -433,7 +450,7 @@ func (app *application) InterviewHandler(w http.ResponseWriter, r *http.Request)
 	app.sessionManager.Put(r, w, "current_question_text", current.Text)
 
 	// Prepare template data
-	data := &TemplateData{
+	data = &TemplateData{
 		Title: fmt.Sprintf("Interview Question %d", qIndex+1),
 		CurrentQuestion: &Question{
 			ID:       questionData.ID,
@@ -464,6 +481,7 @@ func (app *application) SubmitResponseHandler(w http.ResponseWriter, r *http.Req
 
 // Next question handler
 func (app *application) NextQuestionHandler(w http.ResponseWriter, r *http.Request) {
+
 	app.logger.Info("Received request for NextQuestionHandler", "method", r.Method, "url", r.URL.String())
 
 	sessionID := app.sessionManager.GetInt(r, "session_id")
@@ -590,7 +608,7 @@ func (app *application) NextQuestionHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	nextQ := questions[nextIndex]
-	data := &TemplateData{
+	data := app.addDefaultData(&TemplateData{
 		Title: fmt.Sprintf("Interview Question %d", nextIndex+1),
 		CurrentQuestion: &Question{
 			ID:       nextQ.ID,
@@ -606,7 +624,7 @@ func (app *application) NextQuestionHandler(w http.ResponseWriter, r *http.Reque
 		},
 		CurrentIndex:   nextIndex,
 		TotalQuestions: len(questions),
-	}
+	}, w, r)
 
 	app.logger.Info("Rendering template with data", "data", data)
 

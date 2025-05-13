@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
+	"time"
 
 	"github.com/cohune-cabbage/di/internal/validator"
 )
@@ -315,14 +317,17 @@ func (m *InterviewResponseModel) GetInterviewResponsesBySessionID(sessionID int)
 // set the session number
 // set the Teacher ID
 // when it started and ended
-func (m *InterviewResponseModel) CreateInterviewSession() (int, error) {
-	// Insert a new interview session into the database
-	query := `INSERT INTO sessions (teacher_id, started_at, ended_at) VALUES ($1,$2,$3) RETURNING id`
+func (m *InterviewResponseModel) CreateInterviewSession(teacherID int) (int, error) {
+	query := `
+        INSERT INTO sessions (teacher_id, started_at)
+        VALUES ($1, $2)
+        RETURNING id
+    `
 	var sessionID int
-	err := m.DB.QueryRow(query, 1, "2023-10-01", "2023-10-02").Scan(&sessionID)
+	err := m.DB.QueryRow(query, teacherID, time.Now().Format(time.RFC3339)).Scan(&sessionID)
 	if err != nil {
+		log.Printf("Error creating interview session: %v", err)
 		return 0, err
 	}
-
 	return sessionID, nil
 }
