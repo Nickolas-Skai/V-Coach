@@ -5,8 +5,98 @@
   <meta charset="UTF-8">
   <title>{{ .Title }}</title>
   <link rel="stylesheet" href="/static/css/styles.css">
+  <style>
+    body {
+      background-color: #f4f6f9;
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    .interview-container {
+      max-width: 600px;
+      margin: 2rem auto;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      padding: 2rem;
+      position: relative;
+    }
+
+    .chat-header {
+      font-size: 1.4rem;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 1.5rem;
+      color: #2b2e4a;
+    }
+
+    .question-text {
+      background-color: #edf1f7;
+      padding: 1rem;
+      border-radius: 12px;
+      margin-bottom: 1rem;
+      font-size: 1.1rem;
+      color: #333;
+    }
+
+    textarea, input[type="file"] {
+      width: 100%;
+      padding: 0.75rem;
+      margin-top: 0.5rem;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+
+    label {
+      display: block;
+      margin: 0.5rem 0;
+      font-size: 1rem;
+    }
+
+    input[type="radio"], input[type="checkbox"] {
+      margin-right: 0.5rem;
+    }
+
+    button {
+      margin-top: 1rem;
+      margin-right: 1rem;
+      padding: 0.6rem 1.2rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: 0.3s ease;
+    }
+
+    #next-question {
+      background-color: #5567dd;
+      color: #fff;
+    }
+
+    #prev-question {
+      background-color: #bbb;
+      color: #000;
+    }
+
+    #speak-current, #voice-fill {
+      background-color: #1db954;
+      color: white;
+      margin-top: 1rem;
+      width: 48%;
+    }
+
+    @media screen and (max-width: 600px) {
+      #speak-current, #voice-fill {
+        width: 100%;
+        margin-bottom: 1rem;
+      }
+    }
+  </style>
 </head>
 <body>
+
 <div class="interview-container">
   <div class="chat-header">🎤 V-Coach Interview</div>
 
@@ -22,12 +112,12 @@
 
     {{ else if or (eq .CurrentQuestion.Type "radio") (eq .CurrentQuestion.Type "scale") }}
       {{ range .CurrentQuestion.Options }}
-        <label><input type="radio" name="answer" value="{{ . }}" required> {{ . }}</label><br>
+        <label><input type="radio" name="answer" value="{{ . }}" required> {{ . }}</label>
       {{ end }}
 
     {{ else if eq .CurrentQuestion.Type "checkbox" }}
       {{ range .CurrentQuestion.Options }}
-        <label><input type="checkbox" name="answer" value="{{ . }}"> {{ . }}</label><br>
+        <label><input type="checkbox" name="answer" value="{{ . }}"> {{ . }}</label>
       {{ end }}
 
     {{ else if eq .CurrentQuestion.Type "file" }}
@@ -39,9 +129,12 @@
     <button type="button" id="prev-question">Previous Question</button>
   </form>
 
-  <button id="speak-current" type="button">🔊 Read Question</button>
-  <button id="voice-fill" type="button">🎤 Voice Input</button>
+  <div style="display: flex; justify-content: space-between;">
+    <button id="speak-current" type="button">🔊 Read Question</button>
+    <button id="voice-fill" type="button">🎤 Voice Input</button>
+  </div>
 </div>
+
 <script>
   const questions = {{ .Questions }};
 </script>

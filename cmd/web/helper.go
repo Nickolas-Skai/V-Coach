@@ -30,6 +30,8 @@ func (app *application) IsAuthenticated(r *http.Request) bool {
 		return false
 	}
 	userID, ok := session.Values["user_id"].(int)
+	// Check if userID is present and is a non-zero value
+
 	if !ok || userID == 0 {
 		return false
 	}

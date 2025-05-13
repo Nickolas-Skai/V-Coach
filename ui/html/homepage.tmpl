@@ -1,18 +1,53 @@
 {{ template "base" . }}
 {{ define "content" }}
+<!DOCTYPE html>
+<html lang="en">    
+<head>
+    <meta charset="UTF-8">
+    <title>V-Coach</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+ </head>
 <div class="container">
-    <h1>{{.HeaderText}}</h1>
-    <p>{{.Greeting}}</p>
-    
-    <p>{{.PageDescription}}</p>
-    <div class="buttons">
-    
-        {{ if .IsAuthenticated }}
-            <button onclick="location.href='/logout'">Logout</button>
-        {{ else }}
+    <h1>{{ .HeaderText }}</h1>
+    <p>{{ .Greeting }}</p>
+
+    {{ if .IsAuthenticated }}
+        <p>{{ .PageDescription }}</p>
+    {{ else }}
+    <section class="project-intro">
+        <p>
+            V-Coach is a web-based application designed to help coaches receive structured feedback
+            from teachers delivering <strong>Code.org</strong> lessons. It empowers educators with the
+            tools and insights they need to improve their teaching and confidently implement coding curricula.
+        </p>
+
+        <h3>🚀 Key Features</h3>
+        <ul>
+            <li><strong>Feedback Collection:</strong> Teachers provide input on lesson delivery.</li>
+            <li><strong>Performance Analytics:</strong> View insights on teaching effectiveness.</li>
+            <li><strong>Support Integration:</strong> Coaches can address challenges and questions.</li>
+            <li><strong>AI-driven Insights:</strong> Identify trends to improve coaching strategies.</li>
+            <li><strong>User-Friendly Interface:</strong> Simple, accessible design for all users.</li>
+            <li><strong>Secure:</strong> Smooth, protected data handling via Go APIs.</li>
+        </ul>
+
+        <h3>🔧 Built With</h3>
+        <ul>
+            <li>Go (Backend with HTML templating)</li>
+            <li>HTML + CSS (Frontend UI)</li>
+            <li>Machine Learning (for intelligent feedback analysis)</li>
+        </ul>
+
+        <h3>🎯 Our Goal</h3>
+        <p>
+            To streamline how feedback is collected and used—improving lesson quality and coach-teacher collaboration—so that every learner benefits from strong, engaging coding instruction.
+        </p>
+
+        <div class="buttons">
             <button onclick="location.href='/login'">Login</button>
             <button onclick="location.href='/signup'">Sign Up</button>
-        {{ end }}
-    </div>
+        </div>
+    </section>
+    {{ end }}
 </div>
 {{ end }}

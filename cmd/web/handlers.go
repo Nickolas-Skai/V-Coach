@@ -135,7 +135,13 @@ func (app *application) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		app.serverError(w, err)
 		return
 	}
-
+	//set authenticated to true
+	err = app.sessionManager.Put(r, w, "IsAuthenticated", true)
+	if err != nil {
+		app.logger.Error("Failed to store IsAuthenticated in session", "error", err)
+		app.serverError(w, err)
+		return
+	}
 	// Set the session expiration time
 	session, err := app.sessionManager.Store.Get(r, "session")
 	if err != nil {
@@ -164,6 +170,7 @@ func (app *application) SignUpPageHandler(w http.ResponseWriter, r *http.Request
 
 	rows, err := app.db.Query("SELECT id, name FROM schools ORDER BY name")
 	if err != nil {
+		app.logger.Error("Failed to fetch schools from database", "error", err)
 		app.serverError(w, err)
 		return
 	}
@@ -180,10 +187,15 @@ func (app *application) SignUpPageHandler(w http.ResponseWriter, r *http.Request
 		}
 		err := rows.Scan(&school.ID, &school.Name)
 		if err != nil {
+			app.logger.Error("Failed to scan school row", "error", err)
 			app.serverError(w, err)
 			return
 		}
 		schools = append(schools, school)
+	}
+
+	if len(schools) == 0 {
+		app.logger.Warn("No schools found in the database")
 	}
 
 	// Pass the schools to the template
@@ -341,7 +353,19 @@ func (app *application) InterviewHandler(w http.ResponseWriter, r *http.Request)
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
-	// Check if the user has an active interview session
+	//is authenticated to get userid
+
+	if !app.sessionManager.Exists(r, "IsAuthenticated") {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	//log what isAuthenticated is having
+	app.logger.Info("IsAuthenticated", "IsAuthenticated", app.sessionManager.Exists(r, "IsAuthenticated"))
+
+	//says its zero 
+	app.logger.Info("User ID", "user_id", app.sessionManager.GetInt(r, "user_id"))
+	// Check if the session ID exists in the session
+
 	sessionID := app.sessionManager.GetInt(r, "session_id")
 	if sessionID == 0 {
 		// Create a new interview session

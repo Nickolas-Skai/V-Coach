@@ -29,7 +29,7 @@
             margin-bottom: 5px;
         }
         .form-container input {
-            width: 100%;
+            width: 90%;
             padding: 10px;
             margin-bottom: 10px;
             border-radius: 5px;
@@ -61,27 +61,27 @@
   <h2>Sign Up for V-Coach</h2>
  <form method="POST" action="/user/signup">
   <label for="name">Name:</label>
-  <input type="text" id="name" name="name" required>
+  <input type="text" id="name" name="name" >
 
   <label for="email">Email:</label>
-  <input type="email" id="email" name="email" required>
+  <input type="email" id="email" name="email" >
 
 <label for ="age">Age:</label>
-  <input type="number" id="age" name="age" required>
+  <input type="number" id="age" name="age" >
 
   <label for="password">Password:</label>
-  <input type="password" id="password" name="password" required>
+  <input type="password" id="password" name="password" >
     <label for="confirm_password">Confirm Password:</label>
-    <input type="password" id="confirm_password" name="confirm_password" required>
+    <input type="password" id="confirm_password" name="confirm_password" >
 
   <label for="school">School:</label>
-  <select id="school" name="school_id" required>
+  <select id="school" name="school_id" >
     {{ range .Schools }}
       <option value="{{ .ID }}">{{ .Name }}</option>
     {{ end }}
   </select>
     <label for="role">Role:</label>
-    <select id="role" name="role" required>
+    <select id="role" name="role" >
         <option value="teacher">Teacher</option>
         <option value="coach">Coach</option>
     </select>
