@@ -96,7 +96,8 @@ type TemplateData struct {
 		Title     string
 		StartTime time.Time
 	}
-	Errors []string // Added field to store inline error messages
+	Errors     []string          // Added field to store inline error messages
+	FormValues map[string]string // Holds form input values for repopulation
 }
 
 func NewTemplateData() *TemplateData {

@@ -95,3 +95,21 @@ func Valid(value string) bool {
 func ValidateResponse(response string) bool {
 	return NotBlank(response) && MinLength(response, 1) && MaxLength(response, 1000)
 }
+func Matches(value string, rx *regexp.Regexp) bool {
+	return rx.MatchString(value)
+}
+
+func IsValidRole(role string) bool {
+	validRoles := []string{"coach", "teacher"}
+	for _, validRole := range validRoles {
+		if role == validRole {
+			return true
+		}
+	}
+	return false
+}
+
+// validate credentials
+func validateLogCredentials(email, password string) bool {
+	return NotBlank(email) && IsValidEmail(email) && NotBlank(password) && IsValidPassword(password)
+}

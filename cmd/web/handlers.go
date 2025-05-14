@@ -16,11 +16,13 @@ import (
 	//"github.com/cohune-cabbage/di/internal/validator"
 	"strconv"
 
+	"github.com/cohune-cabbage/di/internal/data"
+	//"github.com/cohune-cabbage/di/internal/validator"
 	"github.com/gorilla/csrf"
 
 	"encoding/gob"
 
-	"github.com/Nickolas-Skai/internal/data"
+	//"github.com/Nickolas-Skai/internal/data"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -73,6 +75,9 @@ func (app *application) LoginPageHandler(w http.ResponseWriter, r *http.Request)
 		PageDescription: "Your virtual coaching assistant.",
 		NavLogo:         "static/images/logo.svg",
 		CSRFToken:       template.JS(csrf.TemplateField(r)),
+		Errors:          []string{},
+		FormValues:      map[string]string{},
+		FormErrors:      map[string]string{},
 	}, w, r)
 
 	// Render the login page
@@ -84,117 +89,223 @@ func (app *application) LoginPageHandler(w http.ResponseWriter, r *http.Request)
 	}
 }
 
+// LoginHandler handles the login form submission
 func (app *application) LoginHandler(w http.ResponseWriter, r *http.Request) {
-	// Fixed missing comma in the argument list for inline error handling in LoginHandler.
-	if r.Method != http.MethodPost {
-		data := app.addDefaultData(&TemplateData{
-			Errors: []string{"Method Not Allowed"},
-		}, w, r)
-		err := app.render(w, http.StatusOK, "login.tmpl", data)
-		if err != nil {
-			app.logger.Error("Failed to render login page", "error", err)
-		}
+	// Check if the user is already logged in
+	if app.sessionManager.Exists(r, "user_id") {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
-	// Parse the form data
-	err := r.ParseForm()
-	if err != nil {
-		data := app.addDefaultData(&TemplateData{
-			Errors: []string{"Failed to parse login form"},
-		}, w, r)
-		err := app.render(w, http.StatusOK, "login.tmpl", data)
-		if err != nil {
-			app.logger.Error("Failed to render login page", "error", err)
-		}
+	//get values from the form
+	if err := r.ParseForm(); err != nil {
+		app.logger.Error("Failed to parse form", "error", err)
+		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
+	email := r.FormValue("email")
+	password := r.FormValue("password")
 
-	email := strings.TrimSpace(r.Form.Get("email"))
-	password := r.Form.Get("password")
+	var formErrors map[string]string = make(map[string]string)
 
-	// Validate the email and password
-	if email == "" || password == "" {
-		data := app.addDefaultData(&TemplateData{
-			Errors: []string{"Email and password are required"},
-		}, w, r)
-		err := app.render(w, http.StatusOK, "login.tmpl", data)
-		if err != nil {
-			app.logger.Error("Failed to render login page", "error", err)
-		}
-		return
-	}
-
-	// Authenticate the user using the new query
-	user, err := app.loginModel.Authenticate(email, password)
+	id, err := app.loginModel.Authenticate(email, password)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			app.logger.Warn("Invalid login attempt", "email", email)
-			app.clientError(w, http.StatusUnauthorized)
+			formErrors["login"] = "Invalid email or password"
+		} else {
+			app.logger.Error("Error during authentication", "error", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
-		app.logger.Error("Error during authentication", "error", err)
-		app.serverError(w, err)
-		return
 	}
+	// Check if the user is authenticated
+	if id == 0 {
+		app.logger.Warn("Invalid login attempt", "email", email)
+		formErrors["login"] = "Invalid email or password"
+	} else {
+		// Store user ID in the session
+		err = app.sessionManager.Put(r, w, "user_id", id)
+		if err != nil {
+			app.logger.Error("Failed to store user ID in session", "error", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		app.logger.Info("User ID stored in session", "user_id", id)
 
-	// Store user ID and role in the session
-	err = app.sessionManager.Put(r, w, "user_id", user)
-	if err != nil {
-		app.logger.Error("Failed to store user ID in session", "error", err)
-		app.serverError(w, err)
-		return
-	}
-	app.logger.Info("User ID stored in session", "user_id", user)
-	// Set authenticated to true
-	err = app.sessionManager.Put(r, w, "IsAuthenticated", true)
-	if err != nil {
-		app.logger.Error("Failed to store IsAuthenticated in session", "error", err)
-		app.serverError(w, err)
-		return
-	}
+		// Redirect to the appropriate dashboard based on the user role
+		role, err := app.loginModel.GetUserRoleByID(int64(id))
+		if err != nil {
+			app.logger.Error("Failed to get user role", "error", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		err = app.sessionManager.Put(r, w, "user_role", role)
+		if err != nil {
+			app.logger.Error("Failed to store user role in session", "error", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+		app.logger.Info("User role stored in session", "user_role", role)
 
-	// Set the session expiration time
-	session, err := app.sessionManager.Store.Get(r, "session")
-	if err != nil {
-		app.logger.Error("Failed to get session", "error", err)
-		app.serverError(w, err)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
-	session.Options.MaxAge = 3600 // Set session expiration to 1 hour
-	err = session.Save(r, w)
+	// Render the login page with errors
+	data := app.addDefaultData(&TemplateData{
+		Title:           "Login",
+		HeaderText:      "Login to V-Coach",
+		PageDescription: "Your virtual coaching assistant.",
+		NavLogo:         "static/images/logo.svg",
+		CSRFToken:       template.JS(csrf.TemplateField(r)),
+		Errors:          []string{},
+		FormValues: map[string]string{
+			"email":    email,
+			"password": password,
+		},
+		FormErrors: formErrors,
+	}, w, r)
+	err = app.render(w, http.StatusOK, "login.tmpl", data)
 	if err != nil {
-		app.logger.Error("Failed to save session", "error", err)
-		app.serverError(w, err)
+		app.logger.Error("failed to render login page", "template", "login.tmpl", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
-	}
-	//getuserrolebyid
-	role, err := app.loginModel.GetUserRoleByID(int64(user))
-	if err != nil {
-		app.logger.Error("Failed to get user role", "error", err)
-		app.serverError(w, err)
-		return
-	}
-	// Store user role in the session
-	err = app.sessionManager.Put(r, w, "user_role", role)
-	if err != nil {
-		app.logger.Error("Failed to store user role in session", "error", err)
-		app.serverError(w, err)
-		return
-	}
-	app.logger.Info("User role stored in session", "user_role", role)
-
-	// Redirect to the appropriate dashboard based on the user role
-
-	http.Redirect(w, r, "/", http.StatusSeeOther)
-
-	// Render the login page
-	err = app.render(w, http.StatusOK, "login.tmpl", nil)
-	if err != nil {
-		app.logger.Error("failed to render template", "template", "login.tmpl", "url", r.URL, "method", r.Method, "error", err)
-		app.serverError(w, err)
 	}
 }
+
+/*func (app *application) LoginHandler(w http.ResponseWriter, r *http.Request) {
+
+
+// Updated LoginHandler to use FormValues and FormErrors for inline validation.
+if r.Method != http.MethodPost {
+	data := app.addDefaultData(&TemplateData{
+		FormErrors: map[string]string{"method": "Method Not Allowed"},
+	}, w, r)
+	err := app.render(w, http.StatusOK, "login.tmpl", data)
+	if err != nil {
+		app.logger.Error("Failed to render login page", "error", err)
+	}
+	return
+}
+
+// Parse the form data
+err := r.ParseForm()
+if err != nil {
+	data := app.addDefaultData(&TemplateData{
+		FormErrors: map[string]string{"form": "Failed to parse login form"},
+	}, w, r)
+	err := app.render(w, http.StatusOK, "login.tmpl", data)
+	if err != nil {
+		app.logger.Error("Failed to render login page", "error", err)
+	}
+	return
+}
+
+email := strings.TrimSpace(r.Form.Get("email"))
+password := r.Form.Get("password")
+
+// Validate the email and password
+if email == "" || password == "" {
+	data := app.addDefaultData(&TemplateData{
+		Errors: []string{"Email and password are required"},
+		FormValues: map[string]string{
+			"email":    email,
+			"password": password,
+		},
+	}, w, r)
+	err := app.render(w, http.StatusOK, "login.tmpl", data)
+	if err != nil {
+		app.logger.Error("Failed to render login page", "error", err)
+	}
+	return
+}
+// Validate user credentials using a validation function
+errors := app.validateLoginCredentials(email, password)
+if len(errors) > 0 {
+	data := app.addDefaultData(&TemplateData{
+		FormValues: map[string]string{
+			"email":    email,
+			"password": password,
+		},
+		FormErrors: errors,
+	}, w, r)
+	err := app.render(w, http.StatusOK, "login.tmpl", data)
+	if err != nil {
+		app.logger.Error("Failed to render login page with validation errors", "error", err)
+	}
+	return
+}
+
+// Authenticate the user using the new query
+user, err := app.loginModel.Authenticate(email, password)
+if err != nil {
+	if errors.Is(err, sql.ErrNoRows) {
+		app.logger.Warn("Invalid login attempt", "email", email)
+		app.clientError(w, http.StatusUnauthorized)
+		return
+	}
+	app.logger.Error("Error during authentication", "error", err)
+	app.serverError(w, err)
+	return
+}
+
+// Store user ID and role in the session
+err = app.sessionManager.Put(r, w, "user_id", user)
+if err != nil {
+	app.logger.Error("Failed to store user ID in session", "error", err)
+	app.serverError(w, err)
+	return
+}
+app.logger.Info("User ID stored in session", "user_id", user)
+// Set authenticated to true
+err = app.sessionManager.Put(r, w, "IsAuthenticated", true)
+if err != nil {
+	app.logger.Error("Failed to store IsAuthenticated in session", "error", err)
+	app.serverError(w, err)
+	return
+}
+
+// Set the session expiration time
+session, err := app.sessionManager.Store.Get(r, "session")
+if err != nil {
+	app.logger.Error("Failed to get session", "error", err)
+	app.serverError(w, err)
+	return
+}
+session.Options.MaxAge = 3600 // Set session expiration to 1 hour
+err = session.Save(r, w)
+if err != nil {
+	app.logger.Error("Failed to save session", "error", err)
+	app.serverError(w, err)
+	return
+}
+//getuserrolebyid
+role, err := app.loginModel.GetUserRoleByID(int64(user))
+if err != nil {
+	app.logger.Error("Failed to get user role", "error", err)
+	app.serverError(w, err)
+	return
+}
+// Store user role in the session
+err = app.sessionManager.Put(r, w, "user_role", role)
+if err != nil {
+	app.logger.Error("Failed to store user role in session", "error", err)
+	app.serverError(w, err)
+	return
+}
+app.logger.Info("User role stored in session", "user_role", role)
+
+// Redirect to the appropriate dashboard based on the user role
+
+http.Redirect(w, r, "/", http.StatusSeeOther)
+
+// Render the login page
+err = app.render(w, http.StatusOK, "login.tmpl", nil)
+if err != nil {
+	app.logger.Error("failed to render template", "template", "login.tmpl", "url", r.URL, "method", r.Method, "error", err)
+	app.serverError(w, err)
+}*/
+//}
 func (app *application) SignUpPageHandler(w http.ResponseWriter, r *http.Request) {
 	// Fetch the list of schools
 
@@ -235,6 +346,9 @@ func (app *application) SignUpPageHandler(w http.ResponseWriter, r *http.Request
 		PageDescription: "Join V-Coach today.",
 		NavLogo:         "static/images/logo.svg",
 		Schools:         schools, // Add the list of schools
+		Errors:          []string{},
+		FormData:        map[string]string{},
+		CSRFToken:       template.JS(csrf.TemplateField(r)),
 	}
 	err = app.render(w, http.StatusOK, "signup.tmpl", data)
 	if err != nil {
@@ -243,14 +357,27 @@ func (app *application) SignUpPageHandler(w http.ResponseWriter, r *http.Request
 	}
 }
 func (app *application) SignUpHandler(w http.ResponseWriter, r *http.Request) {
+	// Updated SignUpHandler to use FormValues and FormErrors for inline validation.
 	if r.Method != http.MethodPost {
-		app.clientError(w, http.StatusMethodNotAllowed)
+		data := app.addDefaultData(&TemplateData{
+			FormErrors: map[string]string{"method": "Method Not Allowed"},
+		}, w, r)
+		err := app.render(w, http.StatusOK, "signup.tmpl", data)
+		if err != nil {
+			app.logger.Error("Failed to render signup page", "error", err)
+		}
 		return
 	}
 
 	err := r.ParseForm()
 	if err != nil {
-		app.clientError(w, http.StatusBadRequest)
+		data := app.addDefaultData(&TemplateData{
+			FormErrors: map[string]string{"form": "Failed to parse signup form"},
+		}, w, r)
+		err := app.render(w, http.StatusOK, "signup.tmpl", data)
+		if err != nil {
+			app.logger.Error("Failed to render signup page", "error", err)
+		}
 		return
 	}
 
@@ -262,14 +389,47 @@ func (app *application) SignUpHandler(w http.ResponseWriter, r *http.Request) {
 	schoolIDStr := r.Form.Get("school_id")
 
 	// Validate required fields
-	/* if name == "" || email == "" || password == "" || role == "" || ageStr == "" || schoolIDStr == "" {
-	 	app.clientError(w, http.StatusBadRequest)
-	 	return
-	 }*/
-	//hash the password
+	formErrors := map[string]string{}
+	if name == "" {
+		formErrors["name"] = "Name is required"
+	}
+	if email == "" {
+		formErrors["email"] = "Email is required"
+	}
+	if password == "" {
+		formErrors["password"] = "Password is required"
+	}
+	if role == "" {
+		formErrors["role"] = "Role is required"
+	}
+	if ageStr == "" {
+		formErrors["age"] = "Age is required"
+	}
+	if schoolIDStr == "" {
+		formErrors["school_id"] = "School ID is required"
+	}
 
-	//call validator to validate the email
-	
+	// Ensure `data` is used in the rendering process.
+	if len(formErrors) > 0 {
+		data := app.addDefaultData(&TemplateData{
+			FormValues: map[string]string{
+				"name":      name,
+				"email":     email,
+				"role":      role,
+				"age":       ageStr,
+				"school_id": schoolIDStr,
+			},
+			FormErrors: formErrors,
+		}, w, r)
+		// Render the signup page with errors
+		err := app.render(w, http.StatusOK, "signup.tmpl", data)
+		if err != nil {
+			app.logger.Error("Failed to render signup page", "error", err)
+		}
+		return
+	}
+
+	//hash the password
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {

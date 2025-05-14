@@ -56,42 +56,54 @@
         .form-container a:hover {
             text-decoration: underline;
         }
+        .error {
+            color: red;
+            font-size: 0.9em;
+        }
     </style>
 <div class="form-container">
   <h2>Sign Up for V-Coach</h2>
- <form method="POST" action="/user/signup">
-  <label for="name">Name:</label>
-  <input type="text" id="name" name="name" >
+ <form method="POST" action="/user/signup" novalidate>
 
-  <label for="email">Email:</label>
-  <input type="email" id="email" name="email" >
-
-<label for ="age">Age:</label>
-  <input type="number" id="age" name="age" >
-
-  <label for="password">Password:</label>
-  <input type="password" id="password" name="password" >
-    <label for="confirm_password">Confirm Password:</label>
-
-  <label for="school">School:</label>
-<select id="school" name="school_id" style="width: 90%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ccc;">
-    {{ range .Schools }}
-        <option value="{{ .ID }}">{{ .Name }}</option>
-    {{ end }}
-</select>
-  </select>
-    <label for="role">Role:</label>
-    <select id="role" name="role" style="width: 50%; padding: 10px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ccc;">
-        <option value="teacher">Teacher</option>
-        <option value="coach">Coach</option>
-    </select>
-
-  <button type="submit">Sign Up</button>
+    <div class="form-group">
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" value="{{index .FormValues "name"}}">
+        {{with index .FormErrors "name"}}<span class="error">{{.}}</span>{{end}}
+    </div>
+    <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" value="{{index .FormValues "email"}}">
+        {{with index .FormErrors "email"}}<span class="error">{{.}}</span>{{end}}
+    </div>
+    <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password">
+        {{with index .FormErrors "password"}}<span class="error">{{.}}</span>{{end}}
+    </div>
+     <div class="form-group">
+        <label for="role">Role</label>
+        <select id="role" name="role">
+            <option value="student" {{if eq (index .FormValues "role") "student"}}selected{{end}}>Teacher</option>
+            <option value="coach" {{if eq (index .FormValues "role") "coach"}}selected{{end}}>Coach</option>
+        </select>
+        {{with index .FormErrors "role"}}<span class="error">{{.}}</span>{{end}}
+    </div>
+    <div class="form-group">
+        <label for="school">School</label>
+        <select id="school" name="school">
+            {{ range .Schools }}
+                <option value="{{ .ID }}">{{ .Name }}</option>
+            {{ end }}
+        </select>
+        {{ with index .FormErrors "school" }}<span class="error">{{ . }}</span>{{ end }}
+           </div>
+    <button type="submit">Sign Up</button>
 </form>
+    </div>
+       
+   
     <p>Already have an account? <a href="/login">Login here</a></p>
-    {{ if .FormErrors }}
-        <p style="color: red;">{{ .FormErrors }}</p>
-    {{ end }}
+    
 
 </div>
 {{ end }}
