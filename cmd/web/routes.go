@@ -27,6 +27,7 @@ func (app *application) routes() http.Handler {
 	mux.HandleFunc("/interview_sessions/", app.InterviewDetailsHandler)
 	mux.HandleFunc("/uploads", app.FileHandler)
 	mux.Handle("/coach/sessions", app.requireRole("coach", http.HandlerFunc(app.AllSessionsHandler)))
-
+	mux.Handle("/teacher/sessions/", app.requireAuthentication(http.HandlerFunc(app.AllInterviewSessionsListHandlerteacherversion)))
+	mux.HandleFunc("/help", app.HelpPageHandler) // Corrected route to include leading slash
 	return app.loggingMiddleware(mux)
 }

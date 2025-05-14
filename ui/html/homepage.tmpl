@@ -8,12 +8,46 @@
     <link rel="stylesheet" href="/static/css/styles.css">
  </head>
 <div class="container">
-    <h1>{{ .HeaderText }}</h1>
-    <p>{{ .Greeting }}</p>
+ 
+   
 
     {{ if .IsAuthenticated }}
-        <p>{{ .PageDescription }}</p>
+       
+        <div class="welcome-section">
+  <h2>Welcome back to V-Coach 👋</h2>
+  <p>Your virtual assistant for smarter, more effective lesson delivery.</p>
+  
+  <div class="features-grid">
+    <div class="feature-box">
+      <h3>🎯 Personalized Coaching</h3>
+      <p>Answer quick interview-style questions to reflect on your lesson plans and delivery.</p>
+    </div>
+    
+    <div class="feature-box">
+      <h3>📊 Session Insights</h3>
+      <p style="color: red;">Review past sessions to track progress and get AI-generated tips to improve.</p>
+    </div>
+
+    <div class="feature-box">
+      <h3>🤖 Smart Support</h3>
+      <p>Need help with Code.org lessons? Ask questions and get contextual support instantly.</p>
+    </div>
+    
+    <div class="feature-box">
+      <h3>🔐 Secure & Simple</h3>
+      <p>Everything you share is safe, and the interface is built with your time and clarity in mind.</p>
+    </div>
+  </div>
+
+  <div class="cta-buttons">
+    <a href="/interview" class="btn-primary">Start Interview</a>
+    <a href="/teacher/sessions/" class="btn-secondary">View My Sessions</a>
+  </div>
+</div>
+
+
     {{ else }}
+     <h1>{{ .HeaderText }}</h1>
     <section class="project-intro">
         <p>
             V-Coach is a web-based application designed to help coaches receive structured feedback
@@ -47,7 +81,70 @@
             <button onclick="location.href='/login'">Login</button>
             <button onclick="location.href='/signup'">Sign Up</button>
         </div>
+
     </section>
+
     {{ end }}
 </div>
+
+<style>
+.welcome-section {
+  max-width: 900px;
+  margin: 50px auto;
+  padding: 20px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+  text-align: center;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  margin-top: 30px;
+}
+
+.feature-box {
+  background: #f9f9f9;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: left;
+}
+
+.feature-box h3 {
+  margin-bottom: 10px;
+  color: #007bff;
+}
+
+.cta-buttons {
+  margin-top: 30px;
+}
+
+.btn-primary,
+.btn-secondary {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 1rem;
+  margin: 10px;
+  text-decoration: none;
+  color: #fff;
+}
+
+.btn-primary {
+  background-color: #007bff;
+}
+
+.btn-primary:hover {
+  background-color: #0056b3;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+}
+
+.btn-secondary:hover {
+  background-color: #5a6268;
+}
+</style>
 {{ end }}

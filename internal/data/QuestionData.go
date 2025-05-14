@@ -22,13 +22,14 @@ type QuestionData struct {
 	Required bool     `json:"required"`
 }
 type QuestionModel struct {
-	DB        *sql.DB
-	Validator *validator.Validator
-	ID        int
-	Text      string
-	Type      string
-	Options   []string
-	Required  bool
+	DB          *sql.DB
+	Validator   *validator.Validator
+	ID          int
+	Text        string
+	Type        string
+	Options     []string
+	Required    bool
+	optionsJSON []byte // Field to hold JSON data for options
 }
 type InterviewResponse struct {
 	ID                    int
@@ -125,12 +126,21 @@ func (m *QuestionModel) GetInterviewResponse(id int) (*QuestionData, error) {
 
 	// Scan the result into a QuestionData struct
 	var questionData QuestionData
-	err := row.Scan(&questionData.ID, &questionData.Text, &questionData.Type, &questionData.Options, &questionData.Required)
+	var optionsJSON string
+	err := row.Scan(&questionData.ID, &questionData.Text, &questionData.Type, &optionsJSON, &questionData.Required)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil // No rows found
 		}
 		return nil, err // Other error
+	}
+
+	// Unmarshal the options JSON into a slice
+	if optionsJSON != "" {
+		err = json.Unmarshal([]byte(optionsJSON), &questionData.Options)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal options: %w", err)
+		}
 	}
 
 	return &questionData, nil
@@ -255,16 +265,16 @@ func (m *QuestionModel) GetActiveQuestions() ([]*QuestionModel, error) {
 		var q QuestionModel
 		var optionsJSON []byte
 
-		err := rows.Scan(&q.ID, &q.Text, &q.Type)
+		err := rows.Scan(&q.ID, &q.Text, &q.Type, &optionsJSON)
 		if err != nil {
 			return nil, err
 		}
 
-		// parse options JSON
+		// Parse options JSON
 		if len(optionsJSON) > 0 {
 			err = json.Unmarshal(optionsJSON, &q.Options)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to unmarshal options: %w", err)
 			}
 		}
 

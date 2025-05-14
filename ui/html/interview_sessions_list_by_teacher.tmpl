@@ -1,8 +1,11 @@
 {{template "base" . }}
 {{define "content"}}
 <div style="max-width: 900px; margin: 40px auto; font-family: Arial, sans-serif;">
+{{ if eq .UserRole "coach" }}
     <h1 style="text-align: center; margin-bottom: 30px; color: #333;">Interview Sessions by Teacher</h1>
-
+{{else}}
+    <h1 style="text-align: center; margin-bottom: 30px; color: #333;">Your Sessions </h1>
+{{end}}
     {{if .Sessions}}
         <table style="width: 100%; border-collapse: collapse; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
             <thead style="background-color: #f5f5f5;">

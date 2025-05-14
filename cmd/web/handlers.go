@@ -408,6 +408,8 @@ func (app *application) InterviewHandler(w http.ResponseWriter, r *http.Request)
 	// for debugging purposes
 	for _, question := range questions {
 		app.logger.Info("Question details", "ID", question.ID, "Text", question.Text)
+		//options
+		app.logger.Info("Question options", "Options", question.Options)
 	}
 	if len(questions) == 0 {
 		app.logger.Warn("No questions available for the interview")
@@ -550,7 +552,7 @@ func (app *application) NextQuestionHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	if qIndex >= len(questions) {
-		http.Redirect(w, r, "/interview/complete", http.StatusSeeOther)
+		http.Redirect(w, r, "/interview/success", http.StatusSeeOther)
 		return
 	}
 
@@ -881,6 +883,7 @@ func (app *application) AllInterviewSessionsListbyTeacherHandler(w http.Response
 		http.Error(w, "Invalid teacher ID", http.StatusBadRequest)
 		return
 	}
+
 	teacherID, err := strconv.Atoi(idStr)
 	if err != nil || teacherID <= 0 {
 		app.clientError(w, http.StatusBadRequest)
@@ -1086,4 +1089,91 @@ func (app *application) AllSessionsHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	app.logger.Info("AllSessionsHandler: Successfully rendered template")
+}
+
+func (app *application) AllInterviewSessionsListHandlerteacherversion(w http.ResponseWriter, r *http.Request) {
+	// Check if the user is logged in
+	if !app.sessionManager.Exists(r, "user_id") {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	// Fetch teacher ID from the session
+	teacherID := app.sessionManager.GetInt(r, "user_id")
+	if teacherID == 0 {
+		app.logger.Warn("Missing teacher ID in session")
+		http.Error(w, "Invalid teacher ID", http.StatusBadRequest)
+		return
+	}
+
+	app.logger.Info("Teacher ID", "user_id", teacherID)
+
+	// Fetch all interview sessions from the database
+	sessions, err := app.InterviewResponseModel.GetAllSessionsByTeacherID(teacherID)
+	if err != nil {
+		app.logger.Error("Failed to fetch interview sessions from database", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	// Check if there are no sessions
+	if len(sessions) == 0 {
+		app.logger.Warn("No interview sessions found for the teacher")
+		http.Error(w, "No interview sessions found", http.StatusNotFound)
+		return
+	}
+
+	// Prepare template data
+	data := app.addDefaultData(&TemplateData{
+		Title:           "All Interview Sessions",
+		HeaderText:      fmt.Sprintf("List of all the sessions made by Teacher %d", teacherID),
+		PageDescription: "Manage your coaching sessions here",
+		NavLogo:         "static/images/logo.svg",
+	}, w, r)
+
+	data.Sessions = make([]struct {
+		ID        int
+		TeacherID int
+		StartTime time.Time
+	}, len(sessions))
+
+	for i, session := range sessions {
+		data.Sessions[i] = struct {
+			ID        int
+			TeacherID int
+			StartTime time.Time
+		}{
+			ID:        session,
+			TeacherID: teacherID,
+			StartTime: time.Now(), // Replace with actual start time if available
+		}
+	}
+
+	// Render the template
+	err = app.render(w, http.StatusOK, "interview_sessions_list_by_teacher.tmpl", data)
+	if err != nil {
+		app.logger.Error("Failed to render template", "template", "interview_sessions_list_by_teacher.tmpl", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	app.logger.Info("Rendered interview sessions list by teacher template successfully")
+}
+
+// help page
+func (app *application) HelpPageHandler(w http.ResponseWriter, r *http.Request) {
+
+	// Prepare template data
+	data := app.addDefaultData(&TemplateData{
+		Title:           "Help Page",
+		HeaderText:      "Need Help?",
+		PageDescription: "Find answers to your questions here.",
+		NavLogo:         "static/images/logo.svg",
+	}, w, r)
+
+	err := app.render(w, http.StatusOK, "need_help.tmpl", data)
+	if err != nil {
+		app.logger.Error("failed to render template", "template", "need_help.tmpl", "url", r.URL, "method", r.Method, "error", err)
+		app.serverError(w, err)
+	}
 }

@@ -51,17 +51,13 @@
         </div>
         <div class="links">
             <a href="/interview">Start A Session</a>
-            <a href="/coach/dashboard">Coach Dashboard</a>
-            <a href="/about">About</a>
             {{ if .IsAuthenticated  }}
-                <a href="/logout">Logout</a>
                 {{ if eq .UserRole "coach" }}
-                    <a href="/coach/dashboard">Dashboard</a>
-                {{ end }}
-                {{ if eq .UserRole "teacher" }}
-                    <a href="/teacher/dashboard">Dashboard</a>
+            <a href="/coach/dashboard">Coach Dashboard</a>
                 {{ end }}
                 <a href="/help">Help</a>
+                <a href="/logout">Logout</a>
+                
             {{ else }}
                 <a href="/help">Help</a>
             {{ end }}

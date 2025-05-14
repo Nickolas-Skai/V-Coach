@@ -79,10 +79,11 @@ type TemplateData struct {
 		EndTime   time.Time
 		Duration  time.Duration
 		Questions []struct {
-			ID    int
-			Text  string
-			Title string
-			Type  string
+			ID      int
+			Text    string
+			Title   string
+			Type    string
+			Options []string
 		}
 	}
 	SessionNumber    int
