@@ -38,6 +38,12 @@ type QuestionResponse struct {
 	IsFile   bool
 }
 
+type Session struct {
+	ID        int    `json:"id" db:"id"`
+	TeacherID int    `json:"teacher_id" db:"teacher_id"`
+	Title     string `json:"title" db:"title"`
+}
+
 // answers to the questions
 func (m *ResponseModel) ValidateResponse(response *Response) error {
 	v := m.Validator
@@ -112,4 +118,28 @@ func (m *InterviewResponseModel) GetSessionDetails(sessionID int) (*SessionDetai
 	}
 
 	return &sessionDetails, nil
+}
+
+func (m *InterviewResponseModel) GetAllSessions() ([]Session, error) {
+	query := `
+		SELECT s.id, s.teacher_id, u.name AS title
+		FROM sessions s
+		LEFT JOIN users u ON s.teacher_id = u.id
+	`
+	rows, err := m.DB.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	sessions := []Session{}
+	for rows.Next() {
+		var s Session
+		if err := rows.Scan(&s.ID, &s.TeacherID, &s.Title); err != nil {
+			return nil, err
+		}
+		sessions = append(sessions, s)
+	}
+
+	return sessions, nil
 }

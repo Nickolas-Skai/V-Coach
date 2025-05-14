@@ -2,10 +2,11 @@ package main
 
 import (
 	"errors"
-	"github.com/cohune-cabbage/di/internal/data"
 	"html/template"
 	"net/http"
 	"time"
+
+	"github.com/cohune-cabbage/di/internal/data"
 )
 
 type TemplateData struct {
@@ -78,15 +79,22 @@ type TemplateData struct {
 		EndTime   time.Time
 		Duration  time.Duration
 		Questions []struct {
-			ID   int
-			Text string
-			Type string
+			ID    int
+			Text  string
+			Title string
+			Type  string
 		}
 	}
-	SessionNumber   int
-	ParticipantName string
-	ParticipantID   int
-	Questions       interface{} // Can hold either []*data.QuestionData or []data.QuestionResponse
+	SessionNumber    int
+	ParticipantName  string
+	ParticipantID    int
+	Questions        interface{} // Can hold either []*data.QuestionData or []data.QuestionResponse
+	ForcoachSessions []struct {
+		ID        int
+		TeacherID int
+		Title     string
+		StartTime time.Time
+	}
 }
 
 func NewTemplateData() *TemplateData {

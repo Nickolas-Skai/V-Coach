@@ -1,0 +1,85 @@
+{{ define "content" }}
+<div class="container">
+    <h1>All Interview Sessions</h1>
+    <div class="sessions-list">
+        {{ range .ForcoachSessions }}
+        <div class="session-block">
+            <p><strong>Session ID:</strong> {{ .ID }}</p>
+            <p><strong>Session Name:</strong> {{ .Title }}</p>
+            <div class="actions">
+                <a href="/interview_sessions/{{ .ID }}" class="btn btn-primary">View</a>
+                <a href="/interview_sessions/{{ .ID }}/delete" class="btn btn-danger">Delete</a>
+            </div>
+        </div>
+        {{ end }}
+    </div>
+    <div class="back-button">
+        <a href="javascript:history.back()" class="btn btn-secondary">Back</a>
+    </div>
+</div>
+
+<style>
+    .container {
+        font-family: Arial, sans-serif;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    h1 {
+        text-align: center;
+        color: #333;
+    }
+
+    .sessions-list {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .session-block {
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 15px;
+        background-color: #f9f9f9;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .session-block p {
+        margin: 5px 0;
+    }
+
+    .actions {
+        margin-top: 10px;
+    }
+
+    .btn {
+        text-decoration: none;
+        padding: 8px 12px;
+        border-radius: 4px;
+        color: #fff;
+        font-size: 14px;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+    }
+
+    .btn-danger {
+        background-color: #dc3545;
+    }
+
+    .btn-secondary {
+        background-color: #6c757d;
+    }
+
+    .btn:hover {
+        opacity: 0.9;
+    }
+
+    .back-button {
+        margin-top: 20px;
+        text-align: center;
+    }
+</style>
+{{ end }}

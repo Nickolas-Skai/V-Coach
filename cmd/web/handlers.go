@@ -919,9 +919,9 @@ func (app *application) AllInterviewSessionsListbyTeacherHandler(w http.Response
 			TeacherID int
 			StartTime time.Time
 		}{
-			ID:        session,    // Assuming session is an int representing the ID
-			TeacherID: teacherID,  // Use teacherID from the context
-			StartTime: time.Now(), // Replace with actual start time if available
+			ID:        session,
+			TeacherID: teacherID,
+			StartTime: time.Now(),
 		}
 	}
 	err = app.render(w, http.StatusOK, "interview_sessions_list_by_teacher.tmpl", data)
@@ -1005,4 +1005,85 @@ func (app *application) FileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.ServeFile(w, r, "./uploads/"+decodedPath)
+}
+
+func (app *application) AllSessionsHandler(w http.ResponseWriter, r *http.Request) {
+	app.logger.Info("AllSessionsHandler: Start")
+
+	// Check if the user is logged in
+	if !app.sessionManager.Exists(r, "user_id") {
+		app.logger.Info("AllSessionsHandler: User not logged in")
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	app.logger.Info("AllSessionsHandler: User is logged in")
+
+	// Check if the user is authenticated
+	if !app.sessionManager.Exists(r, "IsAuthenticated") {
+		app.logger.Info("AllSessionsHandler: User not authenticated")
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	app.logger.Info("AllSessionsHandler: User is authenticated")
+
+	// Fetch all interview sessions from the database
+	sessions, err := app.InterviewResponseModel.GetAllSessions()
+	if err != nil {
+		app.logger.Error("AllSessionsHandler: Failed to fetch interview sessions", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	app.logger.Info("AllSessionsHandler: Fetched interview sessions", "count", len(sessions))
+
+	if len(sessions) == 0 {
+		app.logger.Warn("AllSessionsHandler: No interview sessions found")
+		http.Error(w, "No interview sessions found", http.StatusNotFound)
+		return
+	}
+
+	// Prepare template data
+	app.logger.Info("AllSessionsHandler: Preparing template data")
+	data := app.addDefaultData(&TemplateData{
+		Title:           "All Interview Sessions",
+		HeaderText:      "List of All Interview Sessions",
+		PageDescription: "Manage your coaching sessions here",
+		NavLogo:         "static/images/logo.svg",
+		ForcoachSessions: func() []struct {
+			ID        int
+			TeacherID int
+			Title     string
+			StartTime time.Time
+		} {
+			mappedSessions := make([]struct {
+				ID        int
+				TeacherID int
+				Title     string
+				StartTime time.Time
+			}, len(sessions))
+			for i, session := range sessions {
+				mappedSessions[i] = struct {
+					ID        int
+					TeacherID int
+					Title     string
+					StartTime time.Time
+				}{
+					ID:        session.ID,
+					TeacherID: session.TeacherID,
+					Title:     fmt.Sprintf("Session %d by Teacher %d", session.ID, session.TeacherID), // Example title
+					StartTime: time.Now(),                                                             // Replace with actual start time if available
+				}
+			}
+			return mappedSessions
+		}(),
+	}, w, r)
+
+	// Render the template
+	app.logger.Info("AllSessionsHandler: Rendering template")
+	err = app.render(w, http.StatusOK, "all_interview_sessions.tmpl", data)
+	if err != nil {
+		app.logger.Error("AllSessionsHandler: Failed to render template", "template", "all_interview_sessions.tmpl", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	app.logger.Info("AllSessionsHandler: Successfully rendered template")
 }
