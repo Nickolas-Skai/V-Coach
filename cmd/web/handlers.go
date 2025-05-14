@@ -198,7 +198,7 @@ func (app *application) SignUpPageHandler(w http.ResponseWriter, r *http.Request
 			ID   int
 			Name string
 		}
-		err := rows.Scan(&school.ID, sql.RawBytes{}, &school.Name)
+		err := rows.Scan(&school.ID, &school.Name) // Fixed to match the query columns
 		if err != nil {
 			app.logger.Error("Failed to scan school row", "error", err)
 			app.serverError(w, err)
@@ -421,8 +421,11 @@ func (app *application) InterviewHandler(w http.ResponseWriter, r *http.Request)
 
 	// Determine current question index
 	qIndex := 0
-	if qIndexStr := r.URL.Query().Get("q"); qIndexStr != "" {
-		if parsed, err := strconv.Atoi(qIndexStr); err == nil && parsed >= 0 && parsed < len(questions) {
+	// Fixed syntax error in the `if` statement for parsing `qIndexStr`.
+	qIndexStr := r.URL.Query().Get("q")
+	if qIndexStr != "" {
+		parsed, err := strconv.Atoi(qIndexStr)
+		if err == nil && parsed >= 0 && parsed < len(questions) {
 			qIndex = parsed
 		}
 	}
@@ -1176,4 +1179,46 @@ func (app *application) HelpPageHandler(w http.ResponseWriter, r *http.Request) 
 		app.logger.Error("failed to render template", "template", "need_help.tmpl", "url", r.URL, "method", r.Method, "error", err)
 		app.serverError(w, err)
 	}
+}
+
+// Updated DeleteInterviewSessionHandler to parse the session ID from the URL path including '/delete/'.
+func (app *application) DeleteInterviewSessionHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		app.clientError(w, http.StatusMethodNotAllowed)
+		return
+	}
+	// Extract session ID from the URL path using the "/delete/{id}" format
+	app.logger.Info("Received request to delete interview session", "method", r.Method, "url", r.URL.String())
+	sessionIDStr := strings.TrimPrefix(r.URL.Path, "/interview_sessions/delete/")
+
+	sessionIDStr = strings.TrimSuffix(sessionIDStr, "/")
+	sessionID, err := strconv.Atoi(sessionIDStr)
+		if err != nil {
+		app.clientError(w, http.StatusBadRequest)
+		return
+	}
+	// Check if the session ID is valid
+	if sessionID <= 0 {
+		app.clientError(w, http.StatusBadRequest)
+		return
+	}
+	// Delete the interview session
+	err = app.DeleteInterviewSession(sessionID)
+	if err != nil {
+		app.logger.Error("Failed to delete interview session", "sessionID", sessionID, "error", err)
+		app.serverError(w, err)
+		return
+	}
+	// Redirect to the interview sessions list page
+	http.Redirect(w, r, "/coach/sessions", http.StatusSeeOther)
+	app.logger.Info("Deleted interview session", "sessionID", sessionID)
+}
+
+// DeleteInterviewSession deletes an interview session by its ID.
+func (app *application) DeleteInterviewSession(sessionID int) error {
+	_, err := app.db.Exec("DELETE FROM sessions WHERE id = $1", sessionID)
+	if err != nil {
+		return err
+	}
+	return nil
 }
