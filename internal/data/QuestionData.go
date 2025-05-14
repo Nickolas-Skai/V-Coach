@@ -353,3 +353,25 @@ func (m *InterviewResponseModel) GetAllSessionsByTeacherID(teacherID int) ([]int
 
 	return sessionIDs, nil
 }
+
+// get all interview responses by session ID
+func (m *InterviewResponseModel) GetAllInterviewResponsesBySessionID(sessionID int) ([]*InterviewResponse, error) {
+	query := `SELECT id, question_id, response_text, audio_url, confidence, submitted_at FROM interview_responses WHERE session_id = ?`
+	rows, err := m.DB.Query(query, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var responses []*InterviewResponse
+	for rows.Next() {
+		var response InterviewResponse
+		err := rows.Scan(&response.ID, &response.QuestionID, &response.Answer)
+		if err != nil {
+			return nil, err
+		}
+		responses = append(responses, &response)
+	}
+
+	return responses, nil
+}

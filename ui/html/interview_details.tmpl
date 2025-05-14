@@ -1,0 +1,97 @@
+{{template "base" .}}
+{{ define "content" }}
+<style>
+  .interview-details-container {
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 20px;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-family: 'Arial', sans-serif;
+    line-height: 1.6;
+  }
+
+  .interview-details-container h2 {
+    text-align: center;
+    font-size: 2rem;
+    color: #333;
+    margin-bottom: 20px;
+  }
+
+  .interview-details-container p {
+    font-size: 1rem;
+    color: #555;
+    margin: 10px 0;
+  }
+
+  .interview-details-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+  }
+
+  .interview-details-table th,
+  .interview-details-table td {
+    padding: 12px;
+    border: 1px solid #ddd;
+    text-align: left;
+  }
+
+  .interview-details-table th {
+    background-color: #f0f0f0;
+    font-weight: bold;
+  }
+
+  .interview-details-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+  }
+
+  .interview-details-table a {
+    color: #007bff;
+    text-decoration: none;
+  }
+
+  .interview-details-table a:hover {
+    text-decoration: underline;
+  }
+
+  .back-button {
+    margin-top: 20px;
+    text-align: center;
+  }
+</style>
+<div class="interview-details-container">
+  <h2>Interview Details</h2>
+  <p><strong>Session Number:</strong> {{ .SessionNumber }}</p>
+  <p><strong>Participant Name/ID:</strong> {{ .ParticipantName }} / {{ .ParticipantID }}</p>
+
+  <table class="interview-details-table">
+    <thead>
+      <tr>
+        <th>Question</th>
+        <th>Response</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{ range .Questions }}
+        <tr>
+          <td>{{ .Text }}</td>
+          <td>
+            {{ if .IsFile }}
+              <a href="/uploads/{{ .Response }}" target="_blank">View File</a>
+            {{ else }}
+              {{ .Response }}
+            {{ end }}
+          </td>
+        </tr>
+      {{ else }}
+        <tr><td colspan="2">No responses available.</td></tr>
+      {{ end }}
+    </tbody>
+  </table>
+</div>
+<div class="back-button">
+  <a href="javascript:history.back()" class="btn-secondary">Back</a>
+</div>
+{{ end }}

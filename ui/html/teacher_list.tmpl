@@ -1,5 +1,78 @@
-
+{{template "base".}}
 {{ define "content" }}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Teacher List</title>
+  <style>
+    .teacher-list-container {
+      max-width: 1000px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+    }
+
+    .teacher-list-container h2 {
+      margin-bottom: 20px;
+      text-align: center;
+      font-size: 1.8rem;
+      color: #333;
+    }
+
+    .teacher-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    .teacher-table thead {
+      background-color: #f0f4f8;
+    }
+
+    .teacher-table th,
+    .teacher-table td {
+      padding: 12px 15px;
+      border-bottom: 1px solid #ddd;
+      text-align: left;
+    }
+
+    .teacher-table tr:hover {
+      background-color: #f9f9f9;
+    }
+
+    .btn,
+    .btn-secondary {
+      padding: 8px 14px;
+      margin-right: 8px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      text-decoration: none;
+      transition: background 0.3s ease;
+    }
+
+    .btn {
+      background-color: #007bff;
+      color: #fff;
+    }
+
+    .btn:hover {
+      background-color: #0056b3;
+    }
+
+    .btn-secondary {
+      background-color: #e0e0e0;
+      color: #333;
+    }
+
+    .btn-secondary:hover {
+      background-color: #ccc;
+    }
+  </style>
+</head>
+<body>
 <div class="teacher-list-container">
   <h2>👩‍🏫 Assigned Teachers</h2>
   <table class="teacher-table">
@@ -15,15 +88,17 @@
         <tr>
           <td>{{ .Name }}</td>
           <td>{{ .Email }}</td>
-                    <td>
+          <td>
             <a href="/coach/teachers/{{ .ID }}/sessions" class="btn">Sessions</a>
             <a href="/coach/teachers/{{ .ID }}/details" class="btn-secondary">View</a>
           </td>
         </tr>
       {{ else }}
-        <tr><td colspan="5">No teachers assigned.</td></tr>
+        <tr><td colspan="3">No teachers assigned.</td></tr>
       {{ end }}
     </tbody>
   </table>
 </div>
+</body>
+</html>
 {{ end }}

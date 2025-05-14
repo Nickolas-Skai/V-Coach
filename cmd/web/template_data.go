@@ -38,8 +38,7 @@ type TemplateData struct {
 	QuestionDataDB        *data.QuestionModel
 	ErrorMessage          string
 	Data                  map[string]interface{}
-	Questions             []*data.QuestionData // Add this field for questions
-	QuestionsJSON         template.JS          // Add this field for JSON representation of questions
+	QuestionsJSON         template.JS // Add this field for JSON representation of questions
 	InterviewResponse     *data.InterviewResponseModel
 	InterviewResponseJSON *data.InterviewResponseModel
 	IsAuthenticated       bool
@@ -72,6 +71,22 @@ type TemplateData struct {
 		TeacherID int
 		StartTime time.Time
 	}
+	SessionDetails struct {
+		ID        int
+		TeacherID int
+		StartTime time.Time
+		EndTime   time.Time
+		Duration  time.Duration
+		Questions []struct {
+			ID   int
+			Text string
+			Type string
+		}
+	}
+	SessionNumber   int
+	ParticipantName string
+	ParticipantID   int
+	Questions       interface{} // Can hold either []*data.QuestionData or []data.QuestionResponse
 }
 
 func NewTemplateData() *TemplateData {

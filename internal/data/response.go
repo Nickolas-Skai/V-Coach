@@ -25,6 +25,19 @@ type ResponseModel struct {
 	Validator *validator.Validator
 }
 
+type SessionDetails struct {
+	SessionNumber   int
+	ParticipantName string
+	ParticipantID   int
+	Questions       []QuestionResponse
+}
+
+type QuestionResponse struct {
+	Text     string
+	Response string
+	IsFile   bool
+}
+
 // answers to the questions
 func (m *ResponseModel) ValidateResponse(response *Response) error {
 	v := m.Validator
@@ -60,4 +73,43 @@ func (m *ResponseModel) GetByID(id int) (*Response, error) {
 		return nil, err // Some other error occurred
 	}
 	return &response, nil
+}
+
+func (m *InterviewResponseModel) GetSessionDetails(sessionID int) (*SessionDetails, error) {
+	query := `
+        SELECT s.id, u.name, u.id, q.text, r.response_text, q.type
+        FROM sessions s
+        JOIN users u ON s.teacher_id = u.id
+        JOIN responses r ON s.id = r.session_id
+        JOIN questions q ON r.question_id = q.id
+        WHERE s.id = $1
+    `
+
+	rows, err := m.DB.Query(query, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var sessionDetails SessionDetails
+	sessionDetails.Questions = []QuestionResponse{}
+
+	for rows.Next() {
+		var questionResponse QuestionResponse
+		var questionType string
+
+		err := rows.Scan(&sessionDetails.SessionNumber, &sessionDetails.ParticipantName, &sessionDetails.ParticipantID, &questionResponse.Text, &questionResponse.Response, &questionType)
+		if err != nil {
+			return nil, err
+		}
+
+		questionResponse.IsFile = (questionType == "file")
+		sessionDetails.Questions = append(sessionDetails.Questions, questionResponse)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return &sessionDetails, nil
 }

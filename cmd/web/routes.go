@@ -24,6 +24,8 @@ func (app *application) routes() http.Handler {
 	mux.Handle("/coach/teachers", app.requireRole("coach", http.HandlerFunc(app.GetAllTeachersHandler)))
 	mux.HandleFunc("/coach/teachers//details", app.TeacherDetailHandler)
 	mux.HandleFunc("/coach/teachers//sessions", app.AllInterviewSessionsListbyTeacherHandler)
+	mux.HandleFunc("/interview_sessions/", app.InterviewDetailsHandler)
+	mux.HandleFunc("/uploads", app.FileHandler)
 
 	return app.loggingMiddleware(mux)
 }

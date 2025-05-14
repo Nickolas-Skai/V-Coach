@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"github.com/gorilla/csrf"
 
 	"encoding/gob"
+
 	"github.com/cohune-cabbage/di/internal/data"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -928,4 +930,79 @@ func (app *application) AllInterviewSessionsListbyTeacherHandler(w http.Response
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
+}
+
+//interview session details
+// VIEW A SPECIFIC INTERVIEW SESSION IN DETAIL
+
+func (app *application) InterviewDetailsHandler(w http.ResponseWriter, r *http.Request) {
+	// Check if the user is logged in
+	if !app.sessionManager.Exists(r, "user_id") {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	// Check if the user is authenticated
+	if !app.sessionManager.Exists(r, "IsAuthenticated") {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	// Extract session ID from the URL
+
+	sessionIDStr := strings.TrimPrefix(r.URL.Path, "/interview_sessions/")
+	sessionIDStr = strings.TrimSuffix(sessionIDStr, "/details")
+	app.logger.Info("trimmed successfully", "sessionIDStr", sessionIDStr)
+	// Validate the session ID
+
+	sessionID, err := strconv.Atoi(sessionIDStr)
+	if err != nil {
+		app.clientError(w, http.StatusBadRequest)
+		return
+	}
+
+	// Fetch session details
+	sessionDetails, err := app.InterviewResponseModel.GetSessionDetails(sessionID)
+	if err != nil {
+		app.logger.Error("Failed to fetch session details", "error", err)
+		app.serverError(w, err)
+		return
+	}
+
+	if sessionDetails == nil {
+		app.clientError(w, http.StatusNotFound)
+		return
+	}
+
+	// Prepare template data
+	data := app.addDefaultData(&TemplateData{
+		Title:           "Interview Details",
+		SessionNumber:   sessionDetails.SessionNumber,
+		ParticipantName: sessionDetails.ParticipantName,
+		ParticipantID:   sessionDetails.ParticipantID,
+		Questions:       sessionDetails.Questions,
+	}, w, r)
+
+	// Render the template
+	err = app.render(w, http.StatusOK, "interview_details.tmpl", data)
+	if err != nil {
+		app.logger.Error("Failed to render interview details page", "error", err)
+		app.serverError(w, err)
+	}
+}
+
+func (app *application) FileHandler(w http.ResponseWriter, r *http.Request) {
+	filePath := r.URL.Query().Get("file")
+	if filePath == "" {
+		app.clientError(w, http.StatusBadRequest)
+		return
+	}
+
+	// Decode the file path to handle spaces and special characters
+	decodedPath, err := url.QueryUnescape(filePath)
+	if err != nil {
+		app.clientError(w, http.StatusBadRequest)
+		return
+	}
+
+	http.ServeFile(w, r, "./uploads/"+decodedPath)
 }
