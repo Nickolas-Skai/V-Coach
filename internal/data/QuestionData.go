@@ -385,3 +385,13 @@ func (m *InterviewResponseModel) GetAllInterviewResponsesBySessionID(sessionID i
 
 	return responses, nil
 }
+
+// delete interview response
+func (m *InterviewResponseModel) DeleteInterviewSession(id int) error {
+	query := `DELETE FROM interview_responses WHERE id = ?`
+	_, err := m.DB.Exec(query, id)
+	if err != nil {
+		return err
+	}
+	return nil
+}

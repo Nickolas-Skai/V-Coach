@@ -29,6 +29,12 @@ func (app *application) routes() http.Handler {
 	mux.Handle("/coach/sessions", app.requireRole("coach", http.HandlerFunc(app.AllSessionsHandler)))
 	mux.Handle("/teacher/sessions/", app.requireAuthentication(http.HandlerFunc(app.AllInterviewSessionsListHandlerteacherversion)))
 	mux.HandleFunc("/help", app.HelpPageHandler)
-	mux.HandleFunc("POST /interview_sessions/delete/{$}", app.DeleteInterviewSessionHandler)
+	mux.HandleFunc("/interview_sessions/delete", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		app.requireRole("coach", http.HandlerFunc(app.DeleteInterviewSessionHandler)).ServeHTTP(w, r)
+	})
 	return app.loggingMiddleware(mux)
 }

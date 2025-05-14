@@ -139,16 +139,18 @@ func (app *application) addDefaultData(td *TemplateData, _ http.ResponseWriter, 
 	td.UserRole = app.sessionManager.GetString(r, "user_role")
 	td.CurrentUserID = app.sessionManager.GetInt(r, "user_id")
 	td.CurrentUserRole = app.sessionManager.GetString(r, "user_role")
+	td.ErrInvalidCredentials = ErrInvalidCredentials
+	td.ErrInvalidEmail = errors.New("invalid email address")
 	td.Schools = []struct {
 		ID   int
 		Name string
 	}{
-		{ID: 1, Name: "School A"},
-		{ID: 2, Name: "School B"},
-		{ID: 3, Name: "School C"},
+		{ID: 1, Name: "Anglican Primary School"},
+		{ID: 2, Name: "Saint Joseph's RC School"},
+		{ID: 3, Name: "Belize High School"},
+		{ID: 4, Name: "Harmony Government School"},
+		{ID: 5, Name: "Sunrise Academy"},
 	}
-	td.ErrInvalidCredentials = ErrInvalidCredentials
-	td.ErrInvalidEmail = errors.New("invalid email address")
 	td.Data = make(map[string]interface{})
 	td.Data["user_id"] = td.CurrentUserID
 	td.Data["user_role"] = td.CurrentUserRole

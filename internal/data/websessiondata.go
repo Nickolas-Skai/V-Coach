@@ -117,3 +117,16 @@ func (m *SessionManager) Get(r *http.Request, key string) interface{} {
 	}
 	return value
 }
+
+// get school id from session
+func (m *SessionManager) GetSchools(r *http.Request) []int {
+	session, err := m.Store.Get(r, "session")
+	if err != nil {
+		return nil
+	}
+	value, ok := session.Values["school_id"].([]int)
+	if !ok {
+		return nil
+	}
+	return value
+}

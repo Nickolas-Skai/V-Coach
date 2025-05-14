@@ -142,6 +142,7 @@ func (app *application) LoginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	//set is authenticated to true
 	// Check if the user is authenticated
 	if id == 0 {
 		app.logger.Warn("Invalid login attempt", "email", email)
@@ -149,6 +150,7 @@ func (app *application) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// Store user ID in the session
 		err = app.sessionManager.Put(r, w, "user_id", id)
+
 		if err != nil {
 			app.logger.Error("Failed to store user ID in session", "error", err)
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -170,6 +172,8 @@ func (app *application) LoginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		app.logger.Info("User role stored in session", "user_role", role)
+		//set is authenticated to true
+		app.sessionManager.Put(r, w, "IsAuthenticated", true)
 
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
@@ -180,6 +184,7 @@ func (app *application) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		HeaderText:      "Login to V-Coach",
 		PageDescription: "Your virtual coaching assistant.",
 		NavLogo:         "static/images/logo.svg",
+		IsAuthenticated: app.sessionManager.Exists(r, "IsAuthenticated"),
 		CSRFToken:       template.JS(csrf.TemplateField(r)),
 		Errors:          []string{},
 		FormValues: map[string]string{
@@ -196,7 +201,7 @@ func (app *application) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-/*func (app *application) LoginHandler(w http.ResponseWriter, r *http.Request) {
+/*func (app *application) LoginHandler(w http.ResponseWriter, r *http.Request)
 
 
 // Updated LoginHandler to use FormValues and FormErrors for inline validation.
@@ -328,7 +333,7 @@ if err != nil {
 	app.logger.Error("failed to render template", "template", "login.tmpl", "url", r.URL, "method", r.Method, "error", err)
 	app.serverError(w, err)
 }*/
-//}
+
 func (app *application) SignUpPageHandler(w http.ResponseWriter, r *http.Request) {
 	// Fetch the list of schools
 
@@ -349,7 +354,7 @@ func (app *application) SignUpPageHandler(w http.ResponseWriter, r *http.Request
 			ID   int
 			Name string
 		}
-		err := rows.Scan(&school.ID, &school.Name) // Fixed to match the query columns
+		err := rows.Scan(&school.ID, &school.Name)
 		if err != nil {
 			app.logger.Error("Failed to scan school row", "error", err)
 			app.serverError(w, err)
@@ -358,17 +363,13 @@ func (app *application) SignUpPageHandler(w http.ResponseWriter, r *http.Request
 		schools = append(schools, school)
 	}
 
-	if len(schools) == 0 {
-		app.logger.Warn("No schools found in the database")
-	}
-
 	// Pass the schools to the template
 	data := &TemplateData{
 		Title:           "Sign Up",
 		HeaderText:      "Create an Account",
 		PageDescription: "Join V-Coach today.",
 		NavLogo:         "static/images/logo.svg",
-		Schools:         schools, // Add the list of schools
+		Schools:         schools,
 		Errors:          []string{},
 		FormData:        map[string]string{},
 		CSRFToken:       template.JS(csrf.TemplateField(r)),
@@ -394,13 +395,8 @@ func (app *application) SignUpHandler(w http.ResponseWriter, r *http.Request) {
 
 	err := r.ParseForm()
 	if err != nil {
-		data := app.addDefaultData(&TemplateData{
-			FormErrors: map[string]string{"form": "Failed to parse signup form"},
-		}, w, r)
-		err := app.render(w, http.StatusOK, "signup.tmpl", data)
-		if err != nil {
-			app.logger.Error("Failed to render signup page", "error", err)
-		}
+		app.logger.Error("Failed to parse form", "error", err)
+		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
 
@@ -409,7 +405,7 @@ func (app *application) SignUpHandler(w http.ResponseWriter, r *http.Request) {
 	password := r.Form.Get("password")
 	role := r.Form.Get("role")
 	ageStr := r.Form.Get("age")
-	schoolIDStr := r.Form.Get("school_id")
+	schoolIDStr := r.Form.Get("school_Name")
 
 	// Validate required fields
 	formErrors := map[string]string{}
@@ -429,9 +425,15 @@ func (app *application) SignUpHandler(w http.ResponseWriter, r *http.Request) {
 		formErrors["age"] = "Age is required"
 	}
 	if schoolIDStr == "" {
-		formErrors["school_id"] = "School ID is required"
+		formErrors["school_Name"] = "School ID is required"
 	}
-
+	//age need to be equal to 18 and less than 55
+	age, err := strconv.Atoi(ageStr)
+	if err != nil {
+		formErrors["age"] = "Age must be a number"
+	} else if age < 18 || age > 55 {
+		formErrors["age"] = "Age must be between 18 and 55"
+	}
 	// Ensure `data` is used in the rendering process.
 	if len(formErrors) > 0 {
 		data := app.addDefaultData(&TemplateData{
@@ -461,7 +463,7 @@ func (app *application) SignUpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Convert age and school_id to integers
-	age, err := strconv.Atoi(ageStr)
+	age, err = strconv.Atoi(ageStr)
 	if err != nil {
 		app.clientError(w, http.StatusBadRequest)
 		fmt.Println("Error converting age:", err)
@@ -1386,30 +1388,32 @@ func (app *application) HelpPageHandler(w http.ResponseWriter, r *http.Request) 
 
 // Updated DeleteInterviewSessionHandler to parse the session ID from the URL path including '/delete/'.
 func (app *application) DeleteInterviewSessionHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		app.clientError(w, http.StatusMethodNotAllowed)
-		return
-	}
-	//fetch the session id from the url
-	sessionIDStr := strings.TrimPrefix(r.URL.Path, "/interview_sessions/")
-	app.logger.Info("trimmed successfully", "sessionIDStr", sessionIDStr)
-	// Validate the session ID
-	sessionID, err := strconv.Atoi(sessionIDStr)
-	if err != nil || sessionID <= 0 {
-		app.clientError(w, http.StatusBadRequest)
+	// Check if the user is logged in
+	if !app.sessionManager.Exists(r, "user_id") {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
 
-	// Redirect to the interview sessions list page
-	http.Redirect(w, r, "/coach/sessions", http.StatusSeeOther)
-	app.logger.Info("Deleted interview session", "sessionID", sessionID)
-}
-
-// DeleteInterviewSession deletes an interview session by its ID.
-func (app *application) DeleteInterviewSession(sessionID int) error {
-	_, err := app.db.Exec("DELETE FROM sessions WHERE id = $1", sessionID)
+	var sessionID int
+	_, err := fmt.Sscanf(r.URL.Path, "/interview_sessions/%d/delete", &sessionID)
 	if err != nil {
-		return err
+		app.logger.Error("Failed to parse session ID from URL", "error", err)
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return
 	}
-	return nil
+	app.logger.Info("Parsed session ID", "sessionID", sessionID)
+	//trim suffix
+	sessionIDStr = strings.TrimSuffix(sessionIDStr, "/delete")
+	// Delete the interview session
+	err = app.InterviewResponseModel.DeleteInterviewSession(sessionID)
+	if err != nil {
+		app.logger.Error("Failed to delete interview session", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	app.logger.Info("Deleted interview session successfully", "sessionID", sessionID)
+
+	// Redirect to the list of all interview sessions
+	http.Redirect(w, r, "/interview_sessions/", http.StatusSeeOther)
 }

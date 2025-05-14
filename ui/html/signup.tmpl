@@ -89,8 +89,13 @@
         {{with index .FormErrors "role"}}<span class="error">{{.}}</span>{{end}}
     </div>
     <div class="form-group">
+        <label for="age">Age</label>
+        <input type="number" id="age" name="age" value="{{index .FormValues "age"}}">
+        {{with index .FormErrors "age"}}<span class="error">{{.}}</span>{{end}}
+    </div>
+    <div class="form-group">
         <label for="school">School</label>
-        <select id="school" name="school">
+        <select id="school" name="school_Name">
             {{ range .Schools }}
                 <option value="{{ .ID }}">{{ .Name }}</option>
             {{ end }}
@@ -98,12 +103,9 @@
         {{ with index .FormErrors "school" }}<span class="error">{{ . }}</span>{{ end }}
            </div>
     <button type="submit">Sign Up</button>
+      <p>Already have an account? <a href="/login">Login here</a></p>
 </form>
     </div>
-       
-   
-    <p>Already have an account? <a href="/login">Login here</a></p>
-    
 
 </div>
 {{ end }}
