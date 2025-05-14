@@ -69,7 +69,11 @@
   <h2>Login to V-Coach</h2>
 
   <form method="POST" action="/loginuser" nonvalidate>
+  {{with .FormErrors.Default}}
+        <div class="error">{{.}}</div>
+    {{end}}
     <div class="form-group">
+   
         <label for="email">Email</label>
         <input type="email" id="email" name="email" value="{{index .FormValues "email"}}">
         {{with index .FormErrors "email"}}<span class="error">{{.}}</span>{{end}}
@@ -79,6 +83,7 @@
         <input type="password" id="password" name="password">
         {{with index .FormErrors "password"}}<span class="error">{{.}}</span>{{end}}
     </div>
+
    
     <button type="submit">Log In</button>
   </form>

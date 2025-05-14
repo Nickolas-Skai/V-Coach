@@ -105,24 +105,47 @@ func (app *application) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	email := r.FormValue("email")
 	password := r.FormValue("password")
+	// Validate required fields
+	// Validate required fields
+	formErrors_login := map[string]string{}
 
-	var formErrors map[string]string = make(map[string]string)
+	if email == "" {
+		formErrors_login["email"] = "Email is required"
+	}
+	if password == "" {
+		formErrors_login["password"] = "Password is required"
+	}
 
 	id, err := app.loginModel.Authenticate(email, password)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			app.logger.Warn("Invalid login attempt", "email", email)
-			formErrors["login"] = "Invalid email or password"
+			formErrors_login["login"] = "Invalid email or password"
 		} else {
 			app.logger.Error("Error during authentication", "error", err)
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			formErrors_login["Default"] = "Password is incorrect or user does not exist"
+			//rerender longing form
+			data := app.addDefaultData(&TemplateData{
+				Title:           "Login",
+				HeaderText:      "Login to V-Coach",
+				PageDescription: "Your virtual coaching assistant.",
+				NavLogo:         "static/images/logo.svg",
+				CSRFToken:       template.JS(csrf.TemplateField(r)),
+				Errors:          []string{},
+				FormValues: map[string]string{
+					"email":    email,
+					"password": password,
+				},
+				FormErrors: formErrors_login,
+			}, w, r)
+			app.render(w, http.StatusOK, "login.tmpl", data)
 			return
 		}
 	}
 	// Check if the user is authenticated
 	if id == 0 {
 		app.logger.Warn("Invalid login attempt", "email", email)
-		formErrors["login"] = "Invalid email or password"
+		formErrors_login["login"] = "Invalid email or password"
 	} else {
 		// Store user ID in the session
 		err = app.sessionManager.Put(r, w, "user_id", id)
@@ -163,7 +186,7 @@ func (app *application) LoginHandler(w http.ResponseWriter, r *http.Request) {
 			"email":    email,
 			"password": password,
 		},
-		FormErrors: formErrors,
+		FormErrors: formErrors_login,
 	}, w, r)
 	err = app.render(w, http.StatusOK, "login.tmpl", data)
 	if err != nil {
