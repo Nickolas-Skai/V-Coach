@@ -64,6 +64,14 @@
         </div>
     </nav>
 
+    <div class="error-container" style="color: red; text-align: center; margin-top: 1rem;">
+        {{ if .Errors }}
+            {{ range .Errors }}
+                <p>{{ . }}</p>
+            {{ end }}
+        {{ end }}
+    </div>
+
     {{ block "content" . }}{{ end }}
 
 </body>

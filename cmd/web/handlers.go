@@ -20,7 +20,7 @@ import (
 
 	"encoding/gob"
 
-	"github.com/cohune-cabbage/di/internal/data"
+	"github.com/Nickolas-Skai/internal/data"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -85,16 +85,28 @@ func (app *application) LoginPageHandler(w http.ResponseWriter, r *http.Request)
 }
 
 func (app *application) LoginHandler(w http.ResponseWriter, r *http.Request) {
+	// Fixed missing comma in the argument list for inline error handling in LoginHandler.
 	if r.Method != http.MethodPost {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		data := app.addDefaultData(&TemplateData{
+			Errors: []string{"Method Not Allowed"},
+		}, w, r)
+		err := app.render(w, http.StatusOK, "login.tmpl", data)
+		if err != nil {
+			app.logger.Error("Failed to render login page", "error", err)
+		}
 		return
 	}
 
 	// Parse the form data
 	err := r.ParseForm()
 	if err != nil {
-		app.logger.Error("Failed to parse login form", "error", err)
-		app.clientError(w, http.StatusBadRequest)
+		data := app.addDefaultData(&TemplateData{
+			Errors: []string{"Failed to parse login form"},
+		}, w, r)
+		err := app.render(w, http.StatusOK, "login.tmpl", data)
+		if err != nil {
+			app.logger.Error("Failed to render login page", "error", err)
+		}
 		return
 	}
 
@@ -103,8 +115,13 @@ func (app *application) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Validate the email and password
 	if email == "" || password == "" {
-		app.logger.Warn("Missing email or password")
-		app.clientError(w, http.StatusBadRequest)
+		data := app.addDefaultData(&TemplateData{
+			Errors: []string{"Email and password are required"},
+		}, w, r)
+		err := app.render(w, http.StatusOK, "login.tmpl", data)
+		if err != nil {
+			app.logger.Error("Failed to render login page", "error", err)
+		}
 		return
 	}
 
@@ -245,11 +262,14 @@ func (app *application) SignUpHandler(w http.ResponseWriter, r *http.Request) {
 	schoolIDStr := r.Form.Get("school_id")
 
 	// Validate required fields
-	if name == "" || email == "" || password == "" || role == "" || ageStr == "" || schoolIDStr == "" {
-		app.clientError(w, http.StatusBadRequest)
-		return
-	}
+	/* if name == "" || email == "" || password == "" || role == "" || ageStr == "" || schoolIDStr == "" {
+	 	app.clientError(w, http.StatusBadRequest)
+	 	return
+	 }*/
 	//hash the password
+
+	//call validator to validate the email
+	
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -1187,28 +1207,16 @@ func (app *application) DeleteInterviewSessionHandler(w http.ResponseWriter, r *
 		app.clientError(w, http.StatusMethodNotAllowed)
 		return
 	}
-	// Extract session ID from the URL path using the "/delete/{id}" format
-	app.logger.Info("Received request to delete interview session", "method", r.Method, "url", r.URL.String())
-	sessionIDStr := strings.TrimPrefix(r.URL.Path, "/interview_sessions/delete/")
-
-	sessionIDStr = strings.TrimSuffix(sessionIDStr, "/")
+	//fetch the session id from the url
+	sessionIDStr := strings.TrimPrefix(r.URL.Path, "/interview_sessions/")
+	app.logger.Info("trimmed successfully", "sessionIDStr", sessionIDStr)
+	// Validate the session ID
 	sessionID, err := strconv.Atoi(sessionIDStr)
-		if err != nil {
+	if err != nil || sessionID <= 0 {
 		app.clientError(w, http.StatusBadRequest)
 		return
 	}
-	// Check if the session ID is valid
-	if sessionID <= 0 {
-		app.clientError(w, http.StatusBadRequest)
-		return
-	}
-	// Delete the interview session
-	err = app.DeleteInterviewSession(sessionID)
-	if err != nil {
-		app.logger.Error("Failed to delete interview session", "sessionID", sessionID, "error", err)
-		app.serverError(w, err)
-		return
-	}
+
 	// Redirect to the interview sessions list page
 	http.Redirect(w, r, "/coach/sessions", http.StatusSeeOther)
 	app.logger.Info("Deleted interview session", "sessionID", sessionID)

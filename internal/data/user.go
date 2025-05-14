@@ -3,7 +3,7 @@ package data
 import (
 	"database/sql"
 
-	"github.com/cohune-cabbage/di/internal/validator"
+	"github.com/Nickolas-Skai/internal/validator"
 )
 
 type User struct {
@@ -71,4 +71,27 @@ func (m *UserModel) GetSchoolNameByID(id int) (int, error) {
 	}
 	return id, nil
 
+}
+
+//validation for use registration
+
+func ValidateUser( v *validator.Validator,user *UserModel) map[string](string) {
+
+errors:= v.Errors
+	v.Check(validator.NotBlank(user.Name), "name", "must be provided")
+	v.Check(validator.NotBlank(user.Email), "email", "must be provided")
+	v.Check(validator.Matches(user.Email, validator.EmailRX), "email", "must be a valid email address")
+	v.Check(validator.NotBlank(user.Password), "password", "must be provided")
+	v.Check(validator.MinLength(user.Password, 8), "password", "must be at least 8 characters long")
+	v.Check(validator.MaxLength(user.Password, 100), "password", "must not exceed 100 characters")
+	v.Check(validator.NotBlank(user.Role), "role", "must be provided")
+	v.Check(validator.Matches(user.Role, validator.RoleRX), "role", "must be a valid role")
+	v.Check(validator.NotBlank(user.Age), "age", "must be provided")
+	v.Check(validator.MinLength(user.Age, 1), "age", "must be at least 1 characters long")
+	v.Check(validator.MaxLength(user.Age, 3), "age", "must not exceed 3 characters")
+	v.Check(validator.NotBlank(user.School), "school", "must be provided")
+	
+	return errors
+	
+	
 }

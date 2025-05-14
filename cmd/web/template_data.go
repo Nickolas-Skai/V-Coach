@@ -96,6 +96,7 @@ type TemplateData struct {
 		Title     string
 		StartTime time.Time
 	}
+	Errors []string // Added field to store inline error messages
 }
 
 func NewTemplateData() *TemplateData {

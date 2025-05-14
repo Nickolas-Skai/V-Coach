@@ -1,10 +1,10 @@
-module github.com/cohune-cabbage/di
+module github.com/Nickolas-Skai/V-Coach
 
 go 1.23.4
 
 require (
 	github.com/gorilla/sessions v1.4.0
-	golang.org/x/crypto v0.37.0
+	golang.org/x/crypto v0.38.0
 )
 
 require (
@@ -12,5 +12,5 @@ require (
 	github.com/gorilla/securecookie v1.1.2 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/lib/pq v1.10.9 // indirect
-	golang.org/x/text v0.24.0 // indirect
+	golang.org/x/text v0.25.0 // indirect
 )
