@@ -15,7 +15,7 @@ import (
 // SessionManager manages user sessions.
 type SessionManager struct {
 	DB        *sql.DB
-	Store     *sessions.Cooki8eStore
+	Store     *sessions.CookieStore
 	CSRFKey   []byte
 	CSRFToken string
 	Validator *validator.Validator
