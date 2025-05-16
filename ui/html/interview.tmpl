@@ -108,11 +108,11 @@
     </div>
 
     {{ if eq .CurrentQuestion.Type "text" }}
-      <textarea name="answer" rows="3" required></textarea>
+      <textarea name="answer" rows="3" ></textarea>
 
     {{ else if or (eq .CurrentQuestion.Type "radio") (eq .CurrentQuestion.Type "scale") }}
       {{ range .CurrentQuestion.Options }}
-        <label><input type="radio" name="answer" value="{{ . }}" required> {{ . }}</label>
+        <label><input type="radio" name="answer" value="{{ . }}" > {{ . }}</label>
       {{ end }}
 
     {{ else if eq .CurrentQuestion.Type "checkbox" }}
@@ -126,7 +126,6 @@
 
     <input type="hidden" name="question_id" value="{{ .CurrentQuestion.ID }}">
     <button type="submit" id="next-question">Next Question</button>
-    <button type="button" id="prev-question">Previous Question</button>
   </form>
 
   <div style="display: flex; justify-content: space-between;">

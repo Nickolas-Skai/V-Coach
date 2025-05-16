@@ -28,12 +28,18 @@
             display: block;
             margin-bottom: 5px;
         }
-        .form-container input {
+        .form-container input,
+        .form-container select {
             width: 90%;
             padding: 10px;
             margin-bottom: 10px;
             border-radius: 5px;
             border: 1px solid #ccc;
+        }
+        .form-container input.error-input,
+        .form-container select.error-input {
+            border-color: red;
+            background-color: #ffeaea;
         }
         .form-container button {
             width: 100%;
@@ -67,22 +73,22 @@
 
     <div class="form-group">
         <label for="name">Name</label>
-        <input type="text" id="name" name="name" value="{{index .FormValues "name"}}">
+        <input type="text" id="name" name="name" value="{{index .FormValues "name"}}" {{if index .FormErrors "name"}}class="error-input"{{end}}>
         {{with index .FormErrors "name"}}<span class="error">{{.}}</span>{{end}}
     </div>
     <div class="form-group">
         <label for="email">Email</label>
-        <input type="email" id="email" name="email" value="{{index .FormValues "email"}}">
+        <input type="email" id="email" name="email" value="{{index .FormValues "email"}}" {{if index .FormErrors "email"}}class="error-input"{{end}}>
         {{with index .FormErrors "email"}}<span class="error">{{.}}</span>{{end}}
     </div>
     <div class="form-group">
         <label for="password">Password</label>
-        <input type="password" id="password" name="password">
+        <input type="password" id="password" name="password" {{if index .FormErrors "password"}}class="error-input"{{end}}>
         {{with index .FormErrors "password"}}<span class="error">{{.}}</span>{{end}}
     </div>
      <div class="form-group">
         <label for="role">Role</label>
-        <select id="role" name="role">
+        <select id="role" name="role" {{if index .FormErrors "role"}}class="error-input"{{end}}>
             <option value="student" {{if eq (index .FormValues "role") "student"}}selected{{end}}>Teacher</option>
             <option value="coach" {{if eq (index .FormValues "role") "coach"}}selected{{end}}>Coach</option>
         </select>
@@ -90,18 +96,18 @@
     </div>
     <div class="form-group">
         <label for="age">Age</label>
-        <input type="number" id="age" name="age" value="{{index .FormValues "age"}}">
+        <input type="number" id="age" name="age" value="{{index .FormValues "age"}}" {{if index .FormErrors "age"}}class="error-input"{{end}}>
         {{with index .FormErrors "age"}}<span class="error">{{.}}</span>{{end}}
     </div>
     <div class="form-group">
         <label for="school">School</label>
-        <select id="school" name="school_Name">
+        <select id="school" name="school_Name" {{if index .FormErrors "school"}}class="error-input"{{end}}>
             {{ range .Schools }}
                 <option value="{{ .ID }}">{{ .Name }}</option>
             {{ end }}
         </select>
         {{ with index .FormErrors "school" }}<span class="error">{{ . }}</span>{{ end }}
-           </div>
+    </div>
     <button type="submit">Sign Up</button>
       <p>Already have an account? <a href="/login">Login here</a></p>
 </form>

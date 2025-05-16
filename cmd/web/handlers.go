@@ -1403,7 +1403,6 @@ func (app *application) DeleteInterviewSessionHandler(w http.ResponseWriter, r *
 	}
 	app.logger.Info("Parsed session ID", "sessionID", sessionID)
 	//trim suffix
-	sessionIDStr = strings.TrimSuffix(sessionIDStr, "/delete")
 	// Delete the interview session
 	err = app.InterviewResponseModel.DeleteInterviewSession(sessionID)
 	if err != nil {
