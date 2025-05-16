@@ -842,7 +842,7 @@ func (app *application) NextQuestionHandler(w http.ResponseWriter, r *http.Reque
 
 	nextIndex := qIndex + 1
 	if nextIndex >= len(questions) {
-		http.Redirect(w, r, "/interview/complete", http.StatusSeeOther)
+		http.Redirect(w, r, "/interview/success", http.StatusSeeOther)
 		return
 	}
 
